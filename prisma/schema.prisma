@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  resource  String
+  details   String?  @db.Text
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], map: "ActivityLog_userId_fkey")
+
+  @@index([userId], map: "ActivityLog_userId_fkey")
+  @@map("activitylog")
+}
+
+model Ad {
+  id        Int         @id @default(autoincrement())
+  name      String
+  type      AdType      @default(CODE)
+  location  AdLocation  @default(SIDEBAR)
+  content   String      @db.Text
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  @@map("ad")
+}
+
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String
+  slug  String @unique(map: "Category_slug_key")
+  posts Post[]
+
+  @@index([slug], map: "Category_slug_idx")
+  @@map("category")
+}
+
+model Comment {
+  id        Int            @id @default(autoincrement())
+  content   String         @db.Text
+  name      String
+  email     String
+  website   String?
+  status    CommentStatus  @default(PENDING)
+  createdAt DateTime       @default(now())
+  postId    Int
+  userId    Int?
+  parentId  Int?
+  post      Post           @relation(fields: [postId], references: [id], onDelete: Cascade, map: "Comment_postId_fkey")
+  user      User?          @relation(fields: [userId], references: [id], map: "Comment_userId_fkey")
+  parent    Comment?       @relation("comment_replies", fields: [parentId], references: [id], onDelete: Cascade, map: "Comment_parentId_fkey")
+  replies   Comment[]      @relation("comment_replies")
+
+  @@index([createdAt], map: "Comment_createdAt_idx")
+  @@index([postId], map: "Comment_postId_idx")
+  @@index([status], map: "Comment_status_idx")
+  @@index([userId], map: "Comment_userId_fkey")
+  @@index([parentId], map: "Comment_parentId_idx")
+  @@map("comment")
+}
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  subject   String?
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+
+  @@map("contactmessage")
+}
+
+model NewsletterSubscriber {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique(map: "NewsletterSubscriber_email_key")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("newslettersubscriber")
+}
+
+model Post {
+  id                         Int         @id @default(autoincrement())
+  title                      String
+  slug                       String      @unique(map: "Post_slug_key")
+  content                    String      @db.LongText
+  metaTitle                  String?
+  metaDescription            String?
+  focusKeyword               String?
+  featuredImage              String?
+  status                     PostStatus  @default(DRAFT)
+  publishedAt                DateTime?
+  authorId                   Int
+  categoryId                 Int?
+  createdAt                  DateTime    @default(now())
+  isFeatured                 Boolean     @default(false)
+  updatedAt                  DateTime    @updatedAt
+  references                 Json?
+  reviewerId                 Int?
+  showInLatest               Boolean     @default(true)
+  showInPopular              Boolean     @default(false)
+  showInSlider               Boolean     @default(false)
+  excerpt                    String?     @db.Text
+  faq                        Json?
+  featuredImageAlt           String?
+  shareCount                 Int         @default(0)
+  views                      Int         @default(0)
+  previewToken              String?      @unique(map: "Post_previewToken_key")
+  previewExpiresAt          DateTime?
+  comments                   Comment[]
+  author   User  @relation("post_authorIdTouser", fields: [authorId], references: [id], map: "Post_authorId_fkey")
+  category Category? @relation(fields: [categoryId], references: [id], map: "Post_categoryId_fkey")
+  reviewer User? @relation("post_reviewerIdTouser", fields: [reviewerId], references: [id], map: "Post_reviewerId_fkey")
+  tags     PostTag[]
+  versions PostVersion[]
+
+  @@index([authorId], map: "Post_authorId_idx")
+  @@index([categoryId], map: "Post_categoryId_idx")
+  @@index([createdAt], map: "Post_createdAt_idx")
+  @@index([publishedAt], map: "Post_publishedAt_idx")
+  @@index([reviewerId], map: "Post_reviewerId_fkey")
+  @@index([slug], map: "Post_slug_idx")
+  @@index([status], map: "Post_status_idx")
+  @@index([previewToken], map: "Post_previewToken_idx")
+  @@map("post")
+}
+
+model PostTag {
+  postId Int
+  tagId  Int
+  post   Post @relation(fields: [postId], references: [id], map: "PostTag_postId_fkey")
+  tag    Tag  @relation(fields: [tagId], references: [id], map: "PostTag_tagId_fkey")
+
+  @@id([postId, tagId])
+  @@index([tagId], map: "PostTag_tagId_fkey")
+  @@map("posttag")
+}
+
+model Redirect {
+  id          Int           @id @default(autoincrement())
+  source      String        @unique(map: "Redirect_source_key")
+  destination String
+  type        RedirectType  @default(PERMANENT)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  @@map("redirect")
+}
+
+model SiteSettings {
+  id                  Int     @id @default(autoincrement())
+  siteName            String  @default("Eat Smart Daily")
+  siteDescription     String?
+  contactEmail        String?
+  socialFacebook      String?
+  socialTwitter       String?
+  socialInstagram     String?
+  socialPinterest     String?
+  socialYoutube       String?
+  googleAnalyticsId   String?
+  ezoicId             String?
+  footerLogo          String?
+  googleSearchConsole String?
+  headerLogo          String?
+  logoHeight          Int     @default(40)
+  logoSubheading      String?
+  logoWidth           Int     @default(150)
+  useDefaultLogoSize  Boolean @default(true)
+  adsTxt              String? @db.Text
+  googleAdSenseId     String?
+  smtpSettings        String? @db.Text
+
+  @@map("sitesettings")
+}
+
+model Tag {
+  id    Int       @id @default(autoincrement())
+  name  String
+  slug  String    @unique(map: "Tag_slug_key")
+  posts PostTag[]
+
+  @@index([slug], map: "Tag_slug_idx")
+  @@map("tag")
+}
+
+model User {
+  id                         Int           @id @default(autoincrement())
+  name                       String
+  email                      String        @unique(map: "User_email_key")
+  password                   String
+  role                       Role          @default(AUTHOR)
+  createdAt                  DateTime      @default(now())
+  bio                        String?       @db.Text
+  credentials                String?
+  image                      String?
+  jobTitle                   String?
+  socialFacebook             String?
+  socialInstagram            String?
+  socialLinkedin             String?
+  socialTwitter              String?
+  activityLogs  ActivityLog[]
+  comments      Comment[]
+  posts         Post[]        @relation("post_authorIdTouser")
+  reviewedPosts Post[]        @relation("post_reviewerIdTouser")
+  postVersions  PostVersion[]
+  backups       Backup[]
+
+  @@index([email], map: "User_email_idx")
+  @@index([role], map: "User_role_idx")
+  @@map("user")
+}
+
+enum AdType {
+  IMAGE
+  CODE
+  TEXT
+}
+
+enum AdLocation {
+  HEADER
+  SIDEBAR
+  IN_ARTICLE
+  FOOTER
+  BELOW_TITLE
+  END_CONTENT
+}
+
+enum RedirectType {
+  PERMANENT
+  TEMPORARY
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  AUTHOR
+  USER
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  SPAM
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+}
+
+model PostVersion {
+  id        Int       @id @default(autoincrement())
+  postId    Int
+  title     String
+  content   String    @db.LongText
+  excerpt   String?   @db.Text
+  status    PostStatus
+  createdBy Int
+  createdAt DateTime  @default(now())
+  changeDescription String? @db.Text
+  
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade, map: "PostVersion_postId_fkey")
+  editor User @relation(fields: [createdBy], references: [id], map: "PostVersion_createdBy_fkey")
+
+  @@index([postId], map: "PostVersion_postId_idx")
+  @@index([createdAt], map: "PostVersion_createdAt_idx")
+  @@index([createdBy], map: "PostVersion_createdBy_idx")
+  @@map("postversion")
+}
+
+model Backup {
+  id           Int       @id @default(autoincrement())
+  filename     String    @unique
+  size         BigInt
+  type         BackupType @default(FULL)
+  status       BackupStatus @default(PENDING)
+  description  String?   @db.Text
+  createdBy    Int
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+  errorMessage String?   @db.Text
+  
+  editor User @relation(fields: [createdBy], references: [id], map: "Backup_createdBy_fkey")
+
+  @@index([createdBy], map: "Backup_createdBy_idx")
+  @@index([createdAt], map: "Backup_createdAt_idx")
+  @@index([status], map: "Backup_status_idx")
+  @@map("backup")
+}
+
+enum BackupType {
+  FULL
+  INCREMENTAL
+  POSTS_ONLY
+  DATABASE_ONLY
+}
+
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}

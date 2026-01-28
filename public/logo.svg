@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 60" fill="none">
+  <!-- Icon Section -->
+  <g transform="translate(10, 5)">
+    <rect width="50" height="50" rx="12" fill="#16a34a" />
+    <path d="M25 40C25 40 40 34 40 22C40 13 31 10 25 10C19 10 10 13 10 22C10 34 25 40 25 40Z" fill="#ffffff" />
+    <path d="M25 10V28" stroke="#16a34a" stroke-width="3" stroke-linecap="round" />
+  </g>
+  
+  <!-- Text Section -->
+  <text x="75" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="28" fill="#1f2937">
+    Eat Smart <tspan fill="#16a34a">Daily</tspan>
+  </text>
+</svg>
