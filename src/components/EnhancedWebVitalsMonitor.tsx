@@ -6,7 +6,26 @@
  */
 
 import { useEffect } from "react";
-import { onCLS, onINP, onFCP, onLCP, onTTFB, type Metric } from "web-vitals";
+
+// Dynamically import web-vitals to avoid build issues in Turbopack
+let onCLS: any = () => {};
+let onINP: any = () => {};
+let onFCP: any = () => {};
+let onLCP: any = () => {};
+let onTTFB: any = () => {};
+
+if (typeof window !== \"undefined\") {
+  try {
+    const webVitals = require(\"web-vitals\");
+    onCLS = webVitals.onCLS;
+    onINP = webVitals.onINP;
+    onFCP = webVitals.onFCP;
+    onLCP = webVitals.onLCP;
+    onTTFB = webVitals.onTTFB;
+  } catch (e) {
+    console.warn(\"web-vitals module not available\");
+  }
+}
 
 interface CWVMetric {
   name: string;
