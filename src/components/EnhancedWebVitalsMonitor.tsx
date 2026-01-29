@@ -14,17 +14,26 @@ let onFCP: any = () => {};
 let onLCP: any = () => {};
 let onTTFB: any = () => {};
 
-if (typeof window !== \"undefined\") {
+if (typeof window !== "undefined") {
   try {
-    const webVitals = require(\"web-vitals\");
+    const webVitals = require("web-vitals");
     onCLS = webVitals.onCLS;
     onINP = webVitals.onINP;
     onFCP = webVitals.onFCP;
     onLCP = webVitals.onLCP;
     onTTFB = webVitals.onTTFB;
   } catch (e) {
-    console.warn(\"web-vitals module not available\");
+    console.warn("web-vitals module not available");
   }
+}
+
+// Define Metric type for type safety
+interface Metric {
+  name: string;
+  value: number;
+  rating?: string;
+  delta?: number;
+  id?: string;
 }
 
 interface CWVMetric {
