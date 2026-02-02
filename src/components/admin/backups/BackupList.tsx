@@ -159,7 +159,7 @@ export default function BackupList({ backups }: { backups: Backup[] }) {
                       {backup.status === "COMPLETED" && (
                         <>
                           <a
-                            href={`/api/admin/backups/${backup.id}/download`}
+                            href={`/api/admin/backups/${backup.id}`}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Download"
                           >
