@@ -5,7 +5,7 @@ import { captureException } from "@/lib/sentry-config";
 export async function processBackupInBackground(backupId: number, type: string, userId: number) {
   try {
     const startTime = Date.now();
-    let backupData: any = {};
+    const backupData: any = {};
 
     // Update progress: Started
     await prisma.backup.update({

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, Menu, ChevronDown, LogOut, User as UserIcon, Settings, ExternalLink, ChevronRight } from "lucide-react";
+import { Menu, ChevronDown, LogOut, User as UserIcon, Settings, ExternalLink, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { signOut } from "next-auth/react";

@@ -5,7 +5,6 @@
 
 import { NextResponse } from "next/server";
 import { exportMetrics } from "@/lib/advanced-monitoring";
-import { getMetricsSummary } from "@/lib/advanced-monitoring";
 
 export const dynamic = "force-dynamic";
 

@@ -5,6 +5,8 @@ import path from "path";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { v4 as uuidv4 } from "uuid";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
+import { getMaxUploadBytes, validateImageUpload } from "@/lib/upload";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -16,6 +18,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(ip, "api_upload");
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } },
+    );
+  }
+
   const data = await req.formData();
   const file = data.get("file") as File;
 
@@ -23,13 +34,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  // Validate MIME type
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-  if (!allowedTypes.includes(file.type)) {
-     return NextResponse.json({ error: "Invalid file type. Only images are allowed." }, { status: 400 });
+  const maxBytes = getMaxUploadBytes();
+  if (!maxBytes) {
+    return NextResponse.json({ error: "Upload not configured" }, { status: 500 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const validation = validateImageUpload({ mimeType: file.type, sizeBytes: file.size, maxBytes });
+  if (!validation.ok) {
+    return NextResponse.json(
+      { error: validation.error, maxBytes },
+      { status: validation.status },
+    );
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(await file.arrayBuffer());
+  } catch {
+    return NextResponse.json({ error: "Failed to read file" }, { status: 400 });
+  }
 
   const fileName = `${uuidv4()}.webp`;
   const uploadDir = path.join(process.cwd(), "public/uploads");
@@ -40,7 +63,11 @@ export async function POST(req: Request) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
 
-  await sharp(buffer).resize(1200).webp({ quality: 80 }).toFile(outputPath);
+  try {
+    await sharp(buffer).resize(1200).webp({ quality: 80 }).toFile(outputPath);
+  } catch {
+    return NextResponse.json({ error: "Failed to process image" }, { status: 500 });
+  }
 
   return NextResponse.json({
     url: `/uploads/${fileName}`,

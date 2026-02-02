@@ -28,6 +28,7 @@ const DEFAULT_LIMITS: Record<string, RateLimitConfig> = {
   api_comments: { windowMs: 60 * 1000, maxRequests: 5 }, // 5 per minute
   api_views: { windowMs: 10 * 1000, maxRequests: 100 }, // 100 per 10 seconds (view tracking)
   api_auth_login: { windowMs: 15 * 60 * 1000, maxRequests: 5 }, // 5 attempts per 15 minutes
+  api_upload: { windowMs: 60 * 1000, maxRequests: 20 }, // 20 per minute
 };
 
 /**
@@ -47,7 +48,7 @@ export function checkRateLimit(
   const now = Date.now();
   const key = `${endpoint}:${identifier}`;
 
-  let entry = rateLimitStore.get(key);
+  const entry = rateLimitStore.get(key);
 
   // Initialize or reset if window expired
   if (!entry || now > entry.resetTime) {

@@ -14,25 +14,36 @@ export default function StickyAd({ placement, children, adId }: StickyAdProps) {
   const adRef = useRef<HTMLDivElement>(null);
   const [isSticky, setIsSticky] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [viewportHeight, setViewportHeight] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(() =>
+    typeof window === "undefined" ? 0 : window.innerHeight,
+  );
+  const viewportHeightRef = useRef(viewportHeight);
+  const isVisibleRef = useRef(isVisible);
 
   useEffect(() => {
-    setViewportHeight(window.innerHeight);
+    viewportHeightRef.current = viewportHeight;
+  }, [viewportHeight]);
 
+  useEffect(() => {
+    isVisibleRef.current = isVisible;
+  }, [isVisible]);
+
+  useEffect(() => {
     const handleScroll = () => {
       if (!adRef.current) return;
 
       const rect = adRef.current.getBoundingClientRect();
       const adHeight = adRef.current.offsetHeight;
+      const vh = viewportHeightRef.current;
 
       if (placement === "STICKY_BOTTOM") {
         // Stick to bottom when user scrolls past it
         const shouldStick =
-          rect.top > viewportHeight - 100 && rect.bottom > viewportHeight;
+          rect.top > vh - 100 && rect.bottom > vh;
         setIsSticky(shouldStick);
       } else if (placement === "STICKY_SIDEBAR") {
         // Stick to viewport position
-        const shouldStick = rect.top > 100 && rect.bottom < viewportHeight - 50;
+        const shouldStick = rect.top > 100 && rect.bottom < vh - 50;
         setIsSticky(shouldStick);
       }
 
@@ -41,14 +52,13 @@ export default function StickyAd({ placement, children, adId }: StickyAdProps) {
         0,
         Math.min(
           100,
-          ((viewportHeight - Math.max(0, rect.top)) /
-            (viewportHeight + adHeight)) *
+          ((vh - Math.max(0, rect.top)) / (vh + adHeight)) *
             100,
         ),
       );
 
       // Track if ad becomes visible
-      if (visibilityScore > 50 && isVisible) {
+      if (visibilityScore > 50 && isVisibleRef.current) {
         trackAdEvent({
           placement: placement as AdPlacement,
           adId,
@@ -59,7 +69,9 @@ export default function StickyAd({ placement, children, adId }: StickyAdProps) {
     };
 
     const handleResize = () => {
-      setViewportHeight(window.innerHeight);
+      const next = window.innerHeight;
+      viewportHeightRef.current = next;
+      setViewportHeight(next);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -69,7 +81,7 @@ export default function StickyAd({ placement, children, adId }: StickyAdProps) {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleResize);
     };
-  }, [placement, adId, isVisible, viewportHeight]);
+  }, [placement, adId]);
 
   const baseClasses =
     placement === "STICKY_BOTTOM"

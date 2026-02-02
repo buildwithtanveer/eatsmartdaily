@@ -31,7 +31,7 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
+      authorized: ({ token }) => {
         // Verify token exists and is valid
         if (!token) return false;
 

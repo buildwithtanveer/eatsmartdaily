@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useTransition } from "react";
 import { Search, Loader2, FileText, LayoutGrid, Settings, ChevronRight, Hash } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { globalSearch, SearchResult } from "@/app/actions/search";
-import Link from "next/link";
 
 export default function AdminSearch() {
   const [query, setQuery] = useState("");
@@ -17,7 +16,6 @@ export default function AdminSearch() {
   // Debounce search
   useEffect(() => {
     if (!query) {
-      setResults([]);
       return;
     }
 
@@ -71,7 +69,11 @@ export default function AdminSearch() {
           className="bg-transparent border-none outline-none text-sm w-full placeholder:text-gray-400 text-gray-700"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
+            const nextQuery = e.target.value;
+            setQuery(nextQuery);
+            if (!nextQuery) {
+              setResults([]);
+            }
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
@@ -107,7 +109,7 @@ export default function AdminSearch() {
             </div>
           ) : (
             <div className="p-4 text-center text-sm text-gray-500">
-              No results found for "{query}"
+              No results found for &quot;{query}&quot;
             </div>
           )}
           

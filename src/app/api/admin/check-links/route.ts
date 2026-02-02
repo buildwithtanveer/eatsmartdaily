@@ -3,6 +3,19 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { checkUrl, extractLinks } from "@/lib/link-checker";
+import { z } from "zod";
+
+const CheckLinksSchema = z.object({
+  postIds: z.array(z.number().int()).min(1).max(200),
+});
+
+type BrokenLink = { url: string; status: number | string };
+type LinkCheckResult = {
+  postId: number;
+  postTitle: string;
+  postSlug: string;
+  brokenLinks: BrokenLink[];
+};
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -14,50 +27,47 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { postIds } = await request.json();
-
-    if (!postIds || !Array.isArray(postIds)) {
-       return NextResponse.json({ error: "Invalid postIds" }, { status: 400 });
+    const body = await request.json();
+    const validation = CheckLinksSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.flatten() },
+        { status: 400 },
+      );
     }
+
+    const { postIds } = validation.data;
 
     const posts = await prisma.post.findMany({
       where: { id: { in: postIds } },
       select: { id: true, title: true, slug: true, content: true },
     });
 
-    const results = [];
+    const results: LinkCheckResult[] = [];
 
     for (const post of posts) {
       if (!post.content) continue;
       
-      const links = extractLinks(post.content);
-      const brokenLinks = [];
+      const links = extractLinks(post.content).slice(0, 50);
+      const brokenLinks: BrokenLink[] = [];
 
-      for (const link of links) {
-        // Skip internal relative links and mailto
-        if (link.startsWith("/") || link.startsWith("#") || link.startsWith("mailto:")) continue;
-        
-        // Also skip localhost for production safety if needed, but maybe user wants to check dev links?
-        // Let's keep it simple.
+      const concurrency = 5;
+      const queue = [...links];
+      const workers = Array.from({ length: Math.min(concurrency, queue.length) }).map(async () => {
+        while (queue.length) {
+          const link = queue.shift();
+          if (!link) break;
 
-        const status = await checkUrl(link);
-        
-        let isBroken = false;
-        if (typeof status === "string") {
-            isBroken = true; // "Error", "Timeout"
-        } else if (status >= 400) {
-            // 403 Forbidden might be bot protection, but technically it's not accessible.
-            // We report it so user can verify.
-            isBroken = true;
+          const status = await checkUrl(link);
+
+          const isBroken = typeof status === "string" ? true : status >= 400;
+
+          if (isBroken) {
+            brokenLinks.push({ url: link, status });
+          }
         }
-
-        if (isBroken) {
-          brokenLinks.push({
-            url: link,
-            status,
-          });
-        }
-      }
+      });
+      await Promise.all(workers);
 
       if (brokenLinks.length > 0) {
         results.push({

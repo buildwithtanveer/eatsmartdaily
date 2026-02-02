@@ -41,16 +41,16 @@ interface HealthCheckResponse {
  * GET /api/health
  * Returns application health status and diagnostic information
  */
-export async function GET(request: Request): Promise<NextResponse<HealthCheckResponse>> {
+export async function GET(request: Request): Promise<NextResponse> {
   if (process.env.NODE_ENV === "production") {
     const secret = process.env.HEALTHCHECK_TOKEN;
     if (!secret) {
-      return NextResponse.json({ error: "Not Found" } as any, { status: 404 });
+      return NextResponse.json({ error: "Not Found" }, { status: 404 });
     }
 
     const authHeader = request.headers.get("authorization");
     if (authHeader !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" } as any, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
 
@@ -60,7 +60,7 @@ export async function GET(request: Request): Promise<NextResponse<HealthCheckRes
   let overallStatus: "healthy" | "degraded" | "unhealthy" = "healthy";
   const checks: HealthCheckResponse["checks"] = {
     database: { status: "ok", responseTime: 0 },
-    memory: { status: "ok", usage: {} as any },
+    memory: { status: "ok", usage: { heapUsed: 0, heapTotal: 0, external: 0, percentage: 0 } },
     environment: { status: "ok", configuredServices: [] },
   };
 
@@ -111,7 +111,7 @@ export async function GET(request: Request): Promise<NextResponse<HealthCheckRes
     if (checks.memory.status === "warning") {
       overallStatus = "degraded";
     }
-  } catch (error) {
+  } catch {
     checks.memory = {
       status: "warning",
       usage: {
@@ -164,15 +164,12 @@ export async function GET(request: Request): Promise<NextResponse<HealthCheckRes
       configuredServices,
       missingServices: missingServices.length > 0 ? missingServices : undefined,
     };
-  } catch (error) {
+  } catch {
     checks.environment = {
       status: "warning",
       configuredServices: [],
     };
   }
-
-  // Calculate response time
-  const totalResponseTime = Date.now() - startTime;
 
   const response: HealthCheckResponse = {
     status: overallStatus,

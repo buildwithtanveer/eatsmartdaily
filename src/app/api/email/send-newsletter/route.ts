@@ -10,12 +10,6 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-interface Article {
-  title: string;
-  excerpt: string;
-  url: string;
-}
-
 /**
  * POST /api/email/send-newsletter
  * Send newsletter to all subscribers

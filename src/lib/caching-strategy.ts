@@ -3,6 +3,8 @@
  * Implements best practices for browser and server-side caching
  */
 
+import { createHash } from "crypto";
+
 /**
  * Cache header values for different resource types
  */
@@ -124,10 +126,7 @@ export const CDN_CACHE_CONTROL = {
  * Etag and Last-Modified headers for cache validation
  */
 export function generateETag(content: string): string {
-  const hash = require("crypto")
-    .createHash("md5")
-    .update(content)
-    .digest("hex");
+  const hash = createHash("md5").update(content).digest("hex");
   return `"${hash}"`;
 }
 

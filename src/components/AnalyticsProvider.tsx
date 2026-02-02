@@ -19,17 +19,13 @@ const AnalyticsContext = createContext<AnalyticsContextType>({
 });
 
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
-  const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(
-    null,
-  );
-  const [isReady, setIsReady] = useState(false);
+  const [userAnalytics] = useState<UserAnalytics | null>(() => {
+    if (typeof window === "undefined") return null;
+    return initializeAnalytics();
+  });
+  const isReady = !!userAnalytics;
 
   useEffect(() => {
-    // Initialize analytics on first load
-    const analytics = initializeAnalytics();
-    setUserAnalytics(analytics);
-    setIsReady(true);
-
     // Track initial page view
     const pathSegments = window.location.pathname.split("/").filter(Boolean);
     const pageCategory = pathSegments[0] || "home";
@@ -62,7 +58,23 @@ export function useAnalytics(): AnalyticsContextType {
  * Hook to track page metrics
  */
 export function usePageTracking(pageData: PageAnalytics): void {
+  const tagsKey = pageData.tags?.join("|") ?? "";
   useEffect(() => {
-    trackPageView(pageData);
-  }, [pageData.pageTitle, pageData.pageCategory]);
+    trackPageView({
+      pageTitle: pageData.pageTitle,
+      pageCategory: pageData.pageCategory,
+      contentLength: pageData.contentLength,
+      estimatedReadTime: pageData.estimatedReadTime,
+      authorId: pageData.authorId,
+      tags: pageData.tags,
+    });
+  }, [
+    pageData.pageTitle,
+    pageData.pageCategory,
+    pageData.contentLength,
+    pageData.estimatedReadTime,
+    pageData.authorId,
+    pageData.tags,
+    tagsKey,
+  ]);
 }

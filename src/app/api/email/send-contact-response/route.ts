@@ -29,8 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { visitorName, visitorEmail, responseMessage, siteUrl } =
-      await request.json();
+    const { visitorName, visitorEmail, responseMessage } = await request.json();
 
     if (!visitorName || !visitorEmail || !responseMessage) {
       return NextResponse.json(

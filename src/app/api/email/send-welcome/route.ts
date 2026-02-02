@@ -6,7 +6,6 @@
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email-service";
 import { welcomeTemplate } from "@/lib/email-templates";
-import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 

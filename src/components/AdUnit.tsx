@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 
 interface AdUnitProps {
@@ -20,31 +20,39 @@ export default function AdUnit({
   adSlot,
   ezoicId
 }: AdUnitProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [placeholderLoaded, setPlaceholderLoaded] = useState(false);
+  const adsensePushedRef = useRef(false);
   const { ref, inView } = useInView({
     triggerOnce: true,
     rootMargin: '200px', // Load ads 200px before they come into view
   });
 
   useEffect(() => {
-    if (inView && !isLoaded) {
-      if (adClient && adSlot) {
-        try {
-          // @ts-ignore
-          (window.adsbygoogle = window.adsbygoogle || []).push({});
-          setIsLoaded(true);
-        } catch (e) {
-          console.error("AdSense error:", e);
-        }
-      } else {
-        // Simulate ad loading for placeholders
-        const timer = setTimeout(() => {
-          setIsLoaded(true);
-        }, 500);
-        return () => clearTimeout(timer);
+    if (!inView) return;
+
+    if (adClient && adSlot) {
+      if (adsensePushedRef.current) return;
+      adsensePushedRef.current = true;
+      try {
+        const w = window as unknown as { adsbygoogle?: unknown[] };
+        w.adsbygoogle = w.adsbygoogle || [];
+        w.adsbygoogle.push({});
+      } catch (e) {
+        console.error("AdSense error:", e);
       }
+      return;
     }
-  }, [inView, isLoaded, adClient, adSlot]);
+
+    if (!ezoicId && !placeholderLoaded) {
+      const timer = setTimeout(() => {
+        setPlaceholderLoaded(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [inView, adClient, adSlot, ezoicId, placeholderLoaded]);
+
+  const isConfigured = !!(adClient && adSlot) || !!ezoicId;
+  const isLoaded = isConfigured ? inView : placeholderLoaded;
 
   // Ad dimensions based on location
   const getAdDimensions = () => {
@@ -128,4 +136,3 @@ export default function AdUnit({
     </div>
   );
 }
-

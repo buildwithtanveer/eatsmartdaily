@@ -1,14 +1,21 @@
 
+import { validatePublicHttpUrl } from "@/lib/url-safety";
+
 export async function checkUrl(url: string): Promise<number | string> {
   // Common bot blockers or slow sites
   const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+  const safety = await validatePublicHttpUrl(url);
+  if (!safety.ok) {
+    return "Blocked";
+  }
 
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased timeout to 15s
 
     // Try HEAD first
-    const response = await fetch(url, {
+    const response = await fetch(safety.url, {
       method: "HEAD",
       signal: controller.signal,
       headers: {
@@ -35,7 +42,7 @@ export async function checkUrl(url: string): Promise<number | string> {
       const controller2 = new AbortController();
       const timeoutId2 = setTimeout(() => controller2.abort(), 15000);
       
-      const responseGet = await fetch(url, {
+      const responseGet = await fetch(safety.url, {
         method: "GET",
         signal: controller2.signal,
         headers: {

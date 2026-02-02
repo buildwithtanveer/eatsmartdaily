@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { deleteMediaFile } from "@/app/actions/media";
-import { Trash2, Copy, Check, Search, Image as ImageIcon } from "lucide-react";
+import { Trash2, Copy, Check, Image as ImageIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function MediaGrid({ files }: { files: string[] }) {

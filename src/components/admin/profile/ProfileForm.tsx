@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { updateProfile } from "@/app/actions/users";
-import { Save, User as UserIcon, Briefcase, Globe, Facebook, Twitter, Instagram, Linkedin, Image as ImageIcon } from "lucide-react";
+import { Save, User as UserIcon, Briefcase, Globe, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 import MediaSelector from "@/components/admin/media/MediaSelector";
 import { useState } from "react";
 

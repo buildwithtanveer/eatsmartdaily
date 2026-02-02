@@ -96,9 +96,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       // Refresh token expiry check
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const maxAge = 24 * 60 * 60;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (
         (token.iat as number) &&
         Date.now() > (token.iat as number) * 1000 + maxAge * 1000

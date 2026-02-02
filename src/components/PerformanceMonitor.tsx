@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   calculatePerformanceScore,
   getPerformanceRecommendations,
@@ -170,24 +170,19 @@ export default function PerformanceMonitor(): null {
  * Hook to use performance monitoring
  */
 export function usePerformanceMonitoring() {
-  const [metrics, setMetrics] = useState<PerformanceMetrics>({});
+  const metrics = useMemo<PerformanceMetrics>(() => {
+    if (typeof window === "undefined") return {};
+    const navigationStart = performance.getEntriesByType("navigation")[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    if (!navigationStart) return {};
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const navigationStart = performance.getEntriesByType(
-      "navigation",
-    )[0] as PerformanceNavigationTiming;
-    if (!navigationStart) return;
-
-    const data: PerformanceMetrics = {
+    return {
       pageLoadTime: navigationStart.loadEventEnd - navigationStart.fetchStart,
       domContentLoaded:
         navigationStart.domContentLoadedEventEnd - navigationStart.fetchStart,
       ttfb: navigationStart.responseStart - navigationStart.fetchStart,
     };
-
-    setMetrics(data);
   }, []);
 
   return {
