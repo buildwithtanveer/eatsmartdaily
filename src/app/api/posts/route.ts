@@ -23,11 +23,25 @@ const PostCreateSchema = z.object({
 // GET all posts
 export async function GET() {
   const posts = await prisma.post.findMany({
-    include: {
-      category: true,
-      author: true,
+    where: { status: "PUBLISHED" },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      featuredImage: true,
+      featuredImageAlt: true,
+      publishedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      category: {
+        select: { id: true, name: true, slug: true },
+      },
+      author: {
+        select: { id: true, name: true, image: true },
+      },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
   });
 
   return NextResponse.json(posts);

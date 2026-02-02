@@ -21,8 +21,22 @@ interface MetricReport {
 const metricsStore: MetricReport[] = [];
 const MAX_STORED_METRICS = 1000;
 
+function isAuthorized(request: Request) {
+  const secret = process.env.METRICS_API_TOKEN;
+  if (!secret) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  const token = request.headers.get("x-metrics-token");
+  return token === secret;
+}
+
 export async function POST(request: Request) {
   try {
+    if (!isAuthorized(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const metric: MetricReport = await request.json();
 
     // Validate metric data
@@ -38,8 +52,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const storedMetric: MetricReport = {
+      ...metric,
+      url: process.env.NODE_ENV === "production" ? "" : metric.url,
+      userAgent: process.env.NODE_ENV === "production" ? "" : metric.userAgent,
+    };
+
     // Store metric
-    metricsStore.push(metric);
+    metricsStore.push(storedMetric);
 
     // Keep store size manageable
     if (metricsStore.length > MAX_STORED_METRICS) {
@@ -47,17 +67,17 @@ export async function POST(request: Request) {
     }
 
     // Log concerning metrics
-    if (metric.status === "poor") {
+    if (storedMetric.status === "poor") {
       console.warn(`❌ Poor Core Web Vital detected:`, {
-        metric: metric.name,
-        value: metric.value,
-        url: metric.url,
-        timestamp: metric.timestamp,
+        metric: storedMetric.name,
+        value: storedMetric.value,
+        url: storedMetric.url,
+        timestamp: storedMetric.timestamp,
       });
     }
 
     return NextResponse.json(
-      { success: true, metric: metric.name },
+      { success: true, metric: storedMetric.name },
       { status: 201 },
     );
   } catch (error) {
@@ -69,8 +89,25 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   // Get metrics summary
+  const recentMetrics =
+    process.env.NODE_ENV === "production"
+      ? metricsStore.slice(-20).map((m) => ({
+          name: m.name,
+          value: m.value,
+          status: m.status,
+          rating: m.rating,
+          delta: m.delta,
+          id: m.id,
+          timestamp: m.timestamp,
+        }))
+      : metricsStore.slice(-20);
+
   const summary = {
     totalMetrics: metricsStore.length,
     byStatus: {
@@ -90,7 +127,7 @@ export async function GET() {
         poor: number;
       }
     >,
-    recentMetrics: metricsStore.slice(-20),
+    recentMetrics,
   };
 
   // Calculate stats by metric type

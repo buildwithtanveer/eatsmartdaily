@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
 import { sendBulkEmail } from "@/lib/email-service";
 import { newsletterTemplate } from "@/lib/email-templates";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 interface Article {
   title: string;
@@ -20,12 +22,19 @@ interface Article {
  */
 export async function POST(request: Request) {
   try {
-    // Check authorization (optional - can use API key)
+    const apiKey = process.env.NEWSLETTER_API_KEY;
+    if (!apiKey && process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Not Found" }, { status: 404 });
+    }
+
+    const session = await getServerSession(authOptions);
+    const role = (session?.user as { role?: string } | undefined)?.role;
+
+    // Check authorization (Admin session OR API key)
     const authHeader = request.headers.get("authorization");
-    if (
-      authHeader !==
-      `Bearer ${process.env.NEWSLETTER_API_KEY || "development-key"}`
-    ) {
+    const hasAdminSession = !!session && !!role && role !== "USER";
+    const hasValidKey = !!apiKey && authHeader === `Bearer ${apiKey}`;
+    if (!hasAdminSession && !hasValidKey) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -115,6 +124,21 @@ export async function POST(request: Request) {
  */
 export async function GET(request: Request) {
   try {
+    const apiKey = process.env.NEWSLETTER_API_KEY;
+    if (!apiKey && process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Not Found" }, { status: 404 });
+    }
+
+    const session = await getServerSession(authOptions);
+    const role = (session?.user as { role?: string } | undefined)?.role;
+
+    const authHeader = request.headers.get("authorization");
+    const hasAdminSession = !!session && !!role && role !== "USER";
+    const hasValidKey = !!apiKey && authHeader === `Bearer ${apiKey}`;
+    if (!hasAdminSession && !hasValidKey) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const activeSubscribers = await prisma.newsletterSubscriber.count({
       where: { isActive: true },
     });

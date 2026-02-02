@@ -41,7 +41,19 @@ interface HealthCheckResponse {
  * GET /api/health
  * Returns application health status and diagnostic information
  */
-export async function GET(): Promise<NextResponse<HealthCheckResponse>> {
+export async function GET(request: Request): Promise<NextResponse<HealthCheckResponse>> {
+  if (process.env.NODE_ENV === "production") {
+    const secret = process.env.HEALTHCHECK_TOKEN;
+    if (!secret) {
+      return NextResponse.json({ error: "Not Found" } as any, { status: 404 });
+    }
+
+    const authHeader = request.headers.get("authorization");
+    if (authHeader !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: "Unauthorized" } as any, { status: 401 });
+    }
+  }
+
   const startTime = Date.now();
   const checkTimestamp = new Date().toISOString();
 

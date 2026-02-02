@@ -5,16 +5,17 @@ import { processBackupInBackground } from "@/lib/backup-processor";
 export async function GET(request: Request) {
   try {
     // Check authentication (CRON_SECRET)
-    const { searchParams } = new URL(request.url);
-    const key = searchParams.get("key");
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
-    // Support both Bearer token and query param "key"
-    const isAuthorized = 
-      (!cronSecret) || // Open if no secret configured (dev)
-      (key === cronSecret) || 
-      (authHeader === `Bearer ${cronSecret}`);
+    if (!cronSecret && process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { error: "CRON endpoint not configured" },
+        { status: 500 },
+      );
+    }
+
+    const isAuthorized = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
 
     if (!isAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

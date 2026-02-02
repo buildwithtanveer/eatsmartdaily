@@ -1,8 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { notFound } from "next/navigation";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
 export default async function TestDBPage() {
+  if (process.env.NODE_ENV === "production") {
+    notFound();
+  }
+
+  await requireAdmin();
+
   let dbStatus = "Checking...";
   let errorDetail = null;
   let dataSummary = null;

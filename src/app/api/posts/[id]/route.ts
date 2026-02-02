@@ -12,10 +12,36 @@ export async function GET(
   const params = await props.params;
   const post = await prisma.post.findUnique({
     where: { id: Number(params.id) },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      content: true,
+      excerpt: true,
+      metaTitle: true,
+      metaDescription: true,
+      focusKeyword: true,
+      featuredImage: true,
+      featuredImageAlt: true,
+      status: true,
+      publishedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      category: { select: { id: true, name: true, slug: true } },
+      author: { select: { id: true, name: true, image: true } },
+    },
   });
 
   if (!post) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
+  }
+
+  if (post.status !== "PUBLISHED") {
+    const session = await getServerSession(authOptions);
+    const role = (session?.user as { role?: string } | undefined)?.role;
+    if (!session || !role || role === "USER") {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
   }
 
   return NextResponse.json(post);

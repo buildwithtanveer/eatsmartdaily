@@ -14,11 +14,14 @@ export const dynamic = "force-dynamic";
  * Returns performance metrics and monitoring data
  */
 export async function GET(request: Request) {
-  // Optional: Protect this endpoint with a token in production
   const token = request.headers.get("x-metrics-token");
   const metricsSecret = process.env.METRICS_API_TOKEN;
 
-  if (metricsSecret && (!token || token !== metricsSecret)) {
+  if (process.env.NODE_ENV === "production" && !metricsSecret) {
+    return NextResponse.json({ error: "Not Found" }, { status: 404 });
+  }
+
+  if (!metricsSecret || !token || token !== metricsSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

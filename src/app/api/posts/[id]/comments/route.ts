@@ -26,12 +26,12 @@ export async function GET(
       where: { postId, parentId: null },
       include: {
         user: {
-          select: { id: true, name: true, email: true, image: true },
+          select: { id: true, name: true, image: true },
         },
         replies: {
           include: {
             user: {
-              select: { id: true, name: true, email: true, image: true },
+              select: { id: true, name: true, image: true },
             },
           },
           orderBy: { createdAt: "asc" },
@@ -127,7 +127,7 @@ export async function POST(
       },
       include: {
         user: {
-          select: { id: true, name: true, email: true, image: true },
+          select: { id: true, name: true, image: true },
         },
       },
     });
