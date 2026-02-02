@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Compose Newsletter | Eat Smart Daily",
+  title: "Compose Newsletter",
 };
 
 export default async function ComposeNewsletterPage() {

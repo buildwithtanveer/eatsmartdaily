@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: `${siteUrl}/logo.svg`,
+        url: `${siteUrl}/og`,
         width: 1200,
         height: 630,
         alt: "Eat Smart Daily",

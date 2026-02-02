@@ -25,24 +25,32 @@ export async function generateMetadata(props: {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+    const canonicalUrl =
+      page > 1
+        ? `${siteUrl}/category/${params.slug}?page=${page}`
+        : `${siteUrl}/category/${params.slug}`;
     return {
-      title: `${category.name} | Eat Smart Daily`,
+      title: category.name,
       description: `Explore our articles about ${category.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
       keywords: [category.name, "health", "nutrition", "articles", "blog", "tips"],
       alternates: {
-        canonical: `${siteUrl}/category/${params.slug}`,
+        canonical: canonicalUrl,
+      },
+      robots: {
+        index: page === 1,
+        follow: true,
       },
       openGraph: {
-        title: `${category.name} | Eat Smart Daily`,
+        title: category.name,
         description: `Explore our articles about ${category.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
-        url: `${siteUrl}/category/${params.slug}`,
+        url: canonicalUrl,
         type: "website",
       },
     };
   } catch (error) {
     console.error("Error generating metadata for category:", error);
     return {
-      title: "Category | Eat Smart Daily",
+      title: "Category",
     };
   }
 }
@@ -81,6 +89,10 @@ export default async function CategoryPage(props: {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+    const canonicalUrl =
+      page > 1
+        ? `${siteUrl}/category/${category.slug}?page=${page}`
+        : `${siteUrl}/category/${category.slug}`;
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -88,7 +100,7 @@ export default async function CategoryPage(props: {
         "@type": "CollectionPage",
         name: category.name,
         description: `Explore our articles about ${category.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
-        url: `${siteUrl}/category/${category.slug}`,
+        url: canonicalUrl,
       },
       {
         "@type": "BreadcrumbList",
@@ -103,7 +115,7 @@ export default async function CategoryPage(props: {
             "@type": "ListItem",
             "position": 2,
             "name": category.name,
-            "item": `${siteUrl}/category/${category.slug}`,
+            "item": canonicalUrl,
           },
         ],
       },

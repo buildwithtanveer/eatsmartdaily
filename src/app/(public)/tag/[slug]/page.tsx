@@ -25,24 +25,32 @@ export async function generateMetadata(props: {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+    const canonicalUrl =
+      page > 1
+        ? `${siteUrl}/tag/${params.slug}?page=${page}`
+        : `${siteUrl}/tag/${params.slug}`;
     return {
-      title: `Posts Tagged #${tag.name} | Eat Smart Daily`,
+      title: `Posts Tagged #${tag.name}`,
       description: `Explore all our articles tagged with #${tag.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
       keywords: [tag.name, "health", "nutrition", "articles", "blog", "tips"],
       alternates: {
-        canonical: `${siteUrl}/tag/${params.slug}`,
+        canonical: canonicalUrl,
+      },
+      robots: {
+        index: page === 1,
+        follow: true,
       },
       openGraph: {
-        title: `Posts Tagged #${tag.name} | Eat Smart Daily`,
+        title: `Posts Tagged #${tag.name}`,
         description: `Explore all our articles tagged with #${tag.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
-        url: `${siteUrl}/tag/${params.slug}`,
+        url: canonicalUrl,
         type: "website",
       },
     };
   } catch (error) {
     console.error("Error generating metadata for tag:", error);
     return {
-      title: "Tag | Eat Smart Daily",
+      title: "Tag",
     };
   }
 }
@@ -81,6 +89,10 @@ export default async function TagPage(props: {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+    const canonicalUrl =
+      page > 1
+        ? `${siteUrl}/tag/${tag.slug}?page=${page}`
+        : `${siteUrl}/tag/${tag.slug}`;
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -88,7 +100,7 @@ export default async function TagPage(props: {
         "@type": "CollectionPage",
         name: `Posts Tagged #${tag.name}`,
         description: `Explore our articles tagged with #${tag.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
-        url: `${siteUrl}/tag/${tag.slug}`,
+        url: canonicalUrl,
       },
       {
         "@type": "BreadcrumbList",
@@ -103,7 +115,7 @@ export default async function TagPage(props: {
             "@type": "ListItem",
             "position": 2,
             "name": tag.name,
-            "item": `${siteUrl}/tag/${tag.slug}`,
+            "item": canonicalUrl,
           },
         ],
       },

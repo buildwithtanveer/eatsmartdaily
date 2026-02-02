@@ -105,13 +105,19 @@ export async function generateMetadata({
     if (!post) return {};
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+    const title = discoverTitle(post);
+    const fallbackOgUrl = new URL("/og", siteUrl);
+    fallbackOgUrl.searchParams.set("title", post.metaTitle || title);
+    fallbackOgUrl.searchParams.set(
+      "subtitle",
+      post.category?.name || "Healthy Food, Diet & Nutrition Tips",
+    );
+
     const ogImage = post.featuredImage
       ? (post.featuredImage.startsWith("http")
           ? post.featuredImage
           : `${siteUrl}${post.featuredImage}`)
-      : `${siteUrl}/og-default.jpg`;
-
-    const title = discoverTitle(post); // Use optimized title for metadata
+      : fallbackOgUrl.toString();
 
     return {
       title: post.metaTitle || title,
@@ -168,7 +174,7 @@ export async function generateMetadata({
   } catch (error) {
     console.error("Error generating metadata for blog post:", error);
     return {
-      title: "Blog Post | Eat Smart Daily",
+      title: "Blog Post",
     };
   }
 }
@@ -219,16 +225,23 @@ export default async function BlogPostPage({
   // JSON-LD Schema
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
     
+    const fallbackOgUrl = new URL("/og", siteUrl);
+    fallbackOgUrl.searchParams.set("title", post.metaTitle || post.title);
+    fallbackOgUrl.searchParams.set(
+      "subtitle",
+      post.category?.name || "Healthy Food, Diet & Nutrition Tips",
+    );
+
     const ogImage = post.featuredImage
       ? (post.featuredImage.startsWith("http")
           ? post.featuredImage
           : `${siteUrl}${post.featuredImage}`)
-      : `${siteUrl}/logo.svg`;
+      : fallbackOgUrl.toString();
 
     const schema = {
       "@context": "https://schema.org",
       "@type": "BlogPosting",
-      headline: post.title,
+      headline: post.metaTitle || post.title,
       description: post.metaDescription || post.excerpt || undefined,
       image: ogImage,
       datePublished: post.publishedAt?.toISOString(),
@@ -240,10 +253,12 @@ export default async function BlogPostPage({
       },
       publisher: {
         "@type": "Organization",
-        name: "Eat Smart Daily",
+        name: settings?.siteName || "Eat Smart Daily",
         logo: {
           "@type": "ImageObject",
           url: `${siteUrl}/logo.svg`,
+          width: 600,
+          height: 60,
         },
       },
       mainEntityOfPage: {

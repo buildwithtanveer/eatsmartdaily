@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Page Not Found | Eat Smart Daily",
+  title: "Page Not Found",
   description: "The page you are looking for might have been removed or is temporarily unavailable.",
 };
 

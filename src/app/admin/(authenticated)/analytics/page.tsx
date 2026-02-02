@@ -7,7 +7,7 @@ import Link from "next/link";
 import { ArrowRight, Eye, Calendar, User } from "lucide-react";
 
 export const metadata = {
-  title: "Analytics | Eat Smart Daily Admin",
+  title: "Analytics",
 };
 
 export default async function AnalyticsPage() {

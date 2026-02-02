@@ -3,20 +3,22 @@ import ContactForm from "@/components/ContactForm";
 import { Metadata } from "next";
 import { getSiteSettings } from "@/lib/data";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+
 export const metadata: Metadata = {
   title: "Contact Us",
   description: "Get in touch with Eat Smart Daily. We love hearing from our readers!",
   alternates: {
-    canonical: "https://eatsmartdaily.com/contact",
+    canonical: `${siteUrl}/contact`,
   },
   openGraph: {
     title: "Contact Us | Eat Smart Daily",
     description: "Get in touch with Eat Smart Daily. We love hearing from our readers!",
-    url: "https://eatsmartdaily.com/contact",
+    url: `${siteUrl}/contact`,
     type: "website",
     images: [
       {
-        url: "/logo.svg",
+        url: `${siteUrl}/og`,
         width: 1200,
         height: 630,
         alt: "Eat Smart Daily",
@@ -31,13 +33,13 @@ export default async function ContactPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ContactPage",
-    name: "Contact Us | Eat Smart Daily",
+    name: "Contact Us",
     description: "Get in touch with Eat Smart Daily.",
-    url: "https://eatsmartdaily.com/contact",
+    url: `${siteUrl}/contact`,
     mainEntity: {
       "@type": "Organization",
       name: settings?.siteName || "Eat Smart Daily",
-      url: "https://eatsmartdaily.com",
+      url: siteUrl,
       sameAs: [
         settings?.socialFacebook,
         settings?.socialTwitter,

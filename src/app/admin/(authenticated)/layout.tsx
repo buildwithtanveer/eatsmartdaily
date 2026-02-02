@@ -6,7 +6,7 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
-  title: "Admin Dashboard | Eat Smart Daily",
+  title: "Admin Dashboard",
   robots: {
     index: false,
     follow: false,

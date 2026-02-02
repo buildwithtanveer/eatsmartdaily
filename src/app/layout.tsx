@@ -89,7 +89,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: siteName,
       images: [
         {
-          url: `${siteUrl}/logo.svg`,
+          url: `${siteUrl}/og`,
           width: 1200,
           height: 630,
           alt: siteName,
@@ -100,6 +100,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: `${siteName} - Healthy Food, Diet & Nutrition Tips`,
       description: siteDescription,
+      images: [`${siteUrl}/og`],
       creator: settings?.socialTwitter
         ? `@${settings.socialTwitter.split("/").pop()}`
         : "@eatsmartdaily",

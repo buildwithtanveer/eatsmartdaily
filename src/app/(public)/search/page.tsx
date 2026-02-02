@@ -10,9 +10,12 @@ export async function generateMetadata(props: {
   const searchParams = await props.searchParams;
   const query = searchParams.q || "";
 
-  const title = query ? `Search Results for "${query}" | Eat Smart Daily` : "Search | Eat Smart Daily";
+  const title = query ? `Search Results for "${query}"` : "Search";
   const description = "Search for healthy recipes, nutrition tips, and diet guides on Eat Smart Daily.";
-  const url = query ? `https://eatsmartdaily.com/search?q=${encodeURIComponent(query)}` : "https://eatsmartdaily.com/search";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+  const url = query
+    ? `${siteUrl}/search?q=${encodeURIComponent(query)}`
+    : `${siteUrl}/search`;
 
   return {
     title,
@@ -31,7 +34,7 @@ export async function generateMetadata(props: {
       type: "website",
       images: [
         {
-          url: "/logo.svg",
+          url: `${siteUrl}/og`,
           width: 1200,
           height: 630,
           alt: "Eat Smart Daily",

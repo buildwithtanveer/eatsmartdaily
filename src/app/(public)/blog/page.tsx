@@ -5,28 +5,44 @@ import Pagination from "@/components/Pagination";
 import { getBlogPosts } from "@/lib/data";
 import { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Blog | Eat Smart Daily",
-  description:
-    "Read the latest health, nutrition, and healthy living articles on Eat Smart Daily.",
-  alternates: {
-    canonical: "/blog",
-  },
-  openGraph: {
-    title: "Blog | Eat Smart Daily",
-    description: "Read the latest health, nutrition, and healthy living articles on Eat Smart Daily.",
-    url: "/blog",
-    type: "website",
-    images: [
-      {
-        url: "/logo.svg",
-        width: 1200,
-        height: 630,
-        alt: "Eat Smart Daily",
-      },
-    ],
-  },
-};
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+
+export async function generateMetadata(props: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<Metadata> {
+  const searchParams = await props.searchParams;
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const canonicalUrl =
+    page > 1 ? `${siteUrl}/blog?page=${page}` : `${siteUrl}/blog`;
+
+  return {
+    title: "Blog",
+    description:
+      "Read the latest health, nutrition, and healthy living articles on Eat Smart Daily.",
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    robots: {
+      index: page === 1,
+      follow: true,
+    },
+    openGraph: {
+      title: "Blog",
+      description:
+        "Read the latest health, nutrition, and healthy living articles on Eat Smart Daily.",
+      url: canonicalUrl,
+      type: "website",
+      images: [
+        {
+          url: `${siteUrl}/og?title=Blog&subtitle=Latest%20Articles`,
+          width: 1200,
+          height: 630,
+          alt: "Eat Smart Daily",
+        },
+      ],
+    },
+  };
+}
 
 export default async function BlogPage(props: {
   searchParams: Promise<{ page?: string }>;
@@ -39,15 +55,15 @@ export default async function BlogPage(props: {
     const { posts, totalPosts } = await getBlogPosts(page, limit);
     const totalPages = Math.ceil(totalPosts / limit);
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+    const canonicalUrl = page > 1 ? `${siteUrl}/blog?page=${page}` : `${siteUrl}/blog`;
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "CollectionPage",
-          name: "Blog | Eat Smart Daily",
+          name: page > 1 ? `Blog (Page ${page}) | Eat Smart Daily` : "Blog | Eat Smart Daily",
           description: "Read the latest health, nutrition, and healthy living articles on Eat Smart Daily.",
-          url: `${siteUrl}/blog`,
+          url: canonicalUrl,
         },
         {
           "@type": "BreadcrumbList",
@@ -62,7 +78,7 @@ export default async function BlogPage(props: {
               "@type": "ListItem",
               position: 2,
               name: "Blog",
-              item: `${siteUrl}/blog`,
+              item: canonicalUrl,
             },
           ],
         },
