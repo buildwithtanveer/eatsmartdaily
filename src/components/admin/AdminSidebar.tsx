@@ -7,15 +7,19 @@ import {
   FileText,
   UtensilsCrossed,
   Tags,
+  LayoutGrid,
   MessageSquare,
   Image as ImageIcon,
   Megaphone,
   Users,
+  UserCircle,
   Settings,
   Mail,
   Activity,
+  BarChart3,
   Shuffle,
   Wrench,
+  Database,
 } from "lucide-react";
 import { Role } from "@prisma/client";
 
@@ -23,14 +27,18 @@ const menuItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "EDITOR", "AUTHOR"] },
   { name: "Posts", href: "/admin/posts", icon: FileText, roles: ["ADMIN", "EDITOR", "AUTHOR"] },
   { name: "Recipes", href: "/admin/recipes", icon: UtensilsCrossed, roles: ["ADMIN", "EDITOR", "AUTHOR"] },
-  { name: "Categories", href: "/admin/categories", icon: Tags, roles: ["ADMIN", "EDITOR"] },
+  { name: "Categories", href: "/admin/categories", icon: LayoutGrid, roles: ["ADMIN", "EDITOR"] },
+  { name: "Tags", href: "/admin/tags", icon: Tags, roles: ["ADMIN", "EDITOR"] },
   { name: "Comments", href: "/admin/comments", icon: MessageSquare, roles: ["ADMIN", "EDITOR"] },
   { name: "Messages", href: "/admin/messages", icon: Mail, roles: ["ADMIN", "EDITOR"] },
   { name: "Media", href: "/admin/media", icon: ImageIcon, roles: ["ADMIN", "EDITOR", "AUTHOR"] },
   { name: "Ads Management", href: "/admin/ads", icon: Megaphone, roles: ["ADMIN", "EDITOR"] },
   { name: "Newsletter", href: "/admin/newsletter", icon: Megaphone, roles: ["ADMIN", "EDITOR"] },
   { name: "Users", href: "/admin/users", icon: Users, roles: ["ADMIN"] },
+  { name: "Analytics", href: "/admin/analytics", icon: BarChart3, roles: ["ADMIN", "EDITOR"] },
   { name: "Activity Log", href: "/admin/activity", icon: Activity, roles: ["ADMIN"] },
+  { name: "Backups", href: "/admin/backups", icon: Database, roles: ["ADMIN"] },
+  { name: "Profile", href: "/admin/profile", icon: UserCircle, roles: ["ADMIN", "EDITOR", "AUTHOR"] },
   { name: "Redirects", href: "/admin/redirects", icon: Shuffle, roles: ["ADMIN", "EDITOR"] },
   { name: "Tools", href: "/admin/tools", icon: Wrench, roles: ["ADMIN", "EDITOR"] },
   { name: "Settings", href: "/admin/settings", icon: Settings, roles: ["ADMIN"] },
@@ -79,7 +87,7 @@ export default function AdminSidebar({ role }: { role: Role }) {
               <item.icon size={20} className={`${isActive ? "text-black" : "text-gray-500 group-hover:text-white"} transition-colors`} />
               {item.name}
               {isActive && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-black" />
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-green-500" />
               )}
             </Link>
           );

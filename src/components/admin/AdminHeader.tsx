@@ -7,6 +7,9 @@ import { signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+import AdminSearch from "@/components/admin/AdminSearch";
+import AdminNotifications from "@/components/admin/AdminNotifications";
+
 interface AdminHeaderProps {
   user: {
     name?: string | null;
@@ -81,14 +84,7 @@ export default function AdminHeader({ user }: AdminHeaderProps) {
 
       <div className="flex items-center gap-3 md:gap-6">
         {/* Search Bar (Compact) */}
-        <div className="hidden xl:flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg w-64 focus-within:ring-2 focus-within:ring-black/5 focus-within:border-gray-300 transition-all mr-2">
-          <Search size={16} className="text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search..." 
-            className="bg-transparent border-none outline-none text-sm w-full placeholder:text-gray-400 text-gray-700"
-          />
-        </div>
+        <AdminSearch />
 
         <Link 
           href="/" 
@@ -100,10 +96,7 @@ export default function AdminHeader({ user }: AdminHeaderProps) {
           <span>View Site</span>
         </Link>
 
-        <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors group">
-          <Bell size={20} className="group-hover:text-black transition-colors" />
-          <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-        </button>
+        <AdminNotifications />
 
         <div className="h-8 w-px bg-gray-200 hidden md:block" />
 
@@ -141,6 +134,15 @@ export default function AdminHeader({ user }: AdminHeaderProps) {
                 <p className="text-sm font-bold text-gray-900">My Account</p>
                 <p className="text-xs text-gray-500 truncate">{user?.name}</p>
               </div>
+
+              <Link 
+                href="/admin/profile" 
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-black transition-colors"
+                onClick={() => setIsProfileOpen(false)}
+              >
+                <UserIcon size={16} />
+                My Profile
+              </Link>
               
               <Link 
                 href="/admin/settings" 

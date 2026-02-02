@@ -1,20 +1,22 @@
 import Sidebar from "@/components/Sidebar";
 import { Metadata } from "next";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+
 export const metadata: Metadata = {
   title: "Terms and Conditions",
   description: "Review the Terms and Conditions for using Eat Smart Daily.",
   alternates: {
-    canonical: "https://eatsmartdaily.com/terms",
+    canonical: `${siteUrl}/terms`,
   },
   openGraph: {
     title: "Terms and Conditions | Eat Smart Daily",
     description: "Review the Terms and Conditions for using Eat Smart Daily.",
-    url: "https://eatsmartdaily.com/terms",
+    url: `${siteUrl}/terms`,
     type: "website",
     images: [
       {
-        url: "/logo.svg",
+        url: `${siteUrl}/logo.svg`,
         width: 1200,
         height: 630,
         alt: "Eat Smart Daily",
@@ -26,6 +28,29 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebPage",
+                name: "Terms and Conditions",
+                description: "Review the Terms and Conditions for using Eat Smart Daily.",
+                url: `${siteUrl}/terms`,
+              },
+              {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+                  { "@type": "ListItem", position: 2, name: "Terms and Conditions", item: `${siteUrl}/terms` },
+                ],
+              },
+            ],
+          }),
+        }}
+      />
       {/* LEFT CONTENT COLUMN */}
       <div className="lg:col-span-8">
         <h1 className="text-3xl font-bold mb-6 text-gray-800 border-b pb-2">Terms and Conditions</h1>

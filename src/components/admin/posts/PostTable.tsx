@@ -1,22 +1,54 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Post, Category, User } from "@prisma/client";
 import { Edit, Trash2, Eye, CheckSquare, Square, Filter, Search } from "lucide-react";
 import Link from "next/link";
 import { togglePostStatus, deletePost, bulkDeletePosts, bulkUpdateStatus } from "@/app/actions/posts";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import AdminPagination from "@/components/admin/AdminPagination";
 
 interface PostWithRelations extends Post {
   category: Category | null;
   author: User;
 }
 
-export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalPosts: number;
+  limit: number;
+}
+
+export default function PostTable({ 
+  posts, 
+  pagination 
+}: { 
+  posts: PostWithRelations[];
+  pagination: PaginationInfo;
+}) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isPending, startTransition] = useTransition();
-  const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+
+  // Update search when user stops typing
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchTerm) {
+        params.set("search", searchTerm);
+      } else {
+        params.delete("search");
+      }
+      params.set("page", "1"); // Reset to page 1 on search
+      router.push(`?${params.toString()}`);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, router, searchParams]);
 
   const handleSelectAll = () => {
     if (selectedIds.length === posts.length) {
@@ -32,6 +64,19 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
     } else {
       setSelectedIds([...selectedIds, id]);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", page.toString());
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleLimitChange = (limit: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("limit", limit.toString());
+    params.set("page", "1");
+    router.push(`?${params.toString()}`);
   };
 
   const handleBulkAction = (action: "DELETE" | "PUBLISH" | "DRAFT") => {
@@ -63,12 +108,6 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
     }
   };
 
-  // Filter posts based on search
-  const filteredPosts = posts.filter(post => 
-    post.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (post.category?.name || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -84,6 +123,19 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
           />
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Show</span>
+            <select
+              value={pagination.limit}
+              onChange={(e) => handleLimitChange(Number(e.target.value))}
+              className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-black/5"
+            >
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
           <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 bg-white">
             <Filter size={16} />
             Filter
@@ -129,7 +181,13 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto relative">
+          {/* Loading overlay */}
+          {isPending && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-20 flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
           <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50/50">
@@ -143,17 +201,19 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
                   </button>
                 </th>
                 <th className="p-4 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-[40%]">Title</th>
-                <th className="p-4 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-[15%]">Category</th>
-                <th className="p-4 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-[15%]">Author</th>
+                <th className="p-4 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-[10%]">Category</th>
+                <th className="p-4 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-[10%]">Author</th>
+                <th className="p-4 text-center font-bold text-gray-500 text-xs uppercase tracking-wider w-[10%]">Views</th>
+                <th className="p-4 text-center font-bold text-gray-500 text-xs uppercase tracking-wider w-[10%]">Shares</th>
                 <th className="p-4 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-[10%]">Status</th>
                 <th className="p-4 text-left font-bold text-gray-500 text-xs uppercase tracking-wider w-[10%]">Date</th>
                 <th className="p-4 text-right font-bold text-gray-500 text-xs uppercase tracking-wider w-[10%]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredPosts.length === 0 ? (
+              {posts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-16 text-center text-gray-500">
+                  <td colSpan={9} className="p-16 text-center text-gray-500">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
                         <Search className="w-8 h-8 text-gray-300" />
@@ -172,7 +232,7 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
                   </td>
                 </tr>
               ) : (
-                filteredPosts.map((post) => (
+                posts.map((post) => (
                   <tr key={post.id} className="hover:bg-gray-50/80 transition-colors group">
                     <td className="p-4">
                       <button onClick={() => handleSelect(post.id)} className="text-gray-400 hover:text-black transition-colors mt-1 flex items-center justify-center">
@@ -184,7 +244,12 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
                       </button>
                     </td>
                     <td className="p-4">
-                      <div className="font-semibold text-gray-900 line-clamp-2">{post.title}</div>
+                      <div className="font-semibold text-gray-900 line-clamp-2">
+                        {post.isFeatured && (
+                          <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2" title="Featured Post"></span>
+                        )}
+                        {post.title}
+                      </div>
                       <div className="text-xs text-gray-500 mt-1 font-mono hidden sm:block truncate max-w-[300px]">{post.slug}</div>
                     </td>
                     <td className="p-4">
@@ -199,6 +264,16 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
                         </div>
                         <span className="text-sm text-gray-600 truncate max-w-[100px]">{post.author.name}</span>
                       </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="text-sm font-medium text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                        {post.views || 0}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="text-sm font-medium text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                        {post.shareCount || 0}
+                      </span>
                     </td>
                     <td className="p-4">
                       <button
@@ -247,6 +322,16 @@ export default function PostTable({ posts }: { posts: PostWithRelations[] }) {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        <AdminPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalPosts}
+          limit={pagination.limit}
+          onPageChange={handlePageChange}
+          isPending={isPending}
+        />
       </div>
     </div>
   );

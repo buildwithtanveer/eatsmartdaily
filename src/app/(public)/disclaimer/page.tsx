@@ -1,20 +1,22 @@
 import Sidebar from "@/components/Sidebar";
 import { Metadata } from "next";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+
 export const metadata: Metadata = {
   title: "Health Disclaimer",
   description: "Read our Health Disclaimer. The content on Eat Smart Daily is for informational purposes only.",
   alternates: {
-    canonical: "https://eatsmartdaily.com/disclaimer",
+    canonical: `${siteUrl}/disclaimer`,
   },
   openGraph: {
     title: "Health Disclaimer | Eat Smart Daily",
     description: "Read our Health Disclaimer. The content on Eat Smart Daily is for informational purposes only.",
-    url: "https://eatsmartdaily.com/disclaimer",
+    url: `${siteUrl}/disclaimer`,
     type: "website",
     images: [
       {
-        url: "/logo.svg",
+        url: `${siteUrl}/logo.svg`,
         width: 1200,
         height: 630,
         alt: "Eat Smart Daily",
@@ -26,6 +28,30 @@ export const metadata: Metadata = {
 export default function DisclaimerPage() {
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebPage",
+                name: "Health Disclaimer",
+                description:
+                  "The content on Eat Smart Daily is for informational purposes only and not medical advice.",
+                url: `${siteUrl}/disclaimer`,
+              },
+              {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+                  { "@type": "ListItem", position: 2, name: "Disclaimer", item: `${siteUrl}/disclaimer` },
+                ],
+              },
+            ],
+          }),
+        }}
+      />
       {/* LEFT CONTENT COLUMN */}
       <div className="lg:col-span-8">
         <h1 className="text-3xl font-bold mb-6 text-gray-800 border-b pb-2">Disclaimer</h1>

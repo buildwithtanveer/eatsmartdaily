@@ -14,6 +14,7 @@ import {
 } from "@/lib/sanitizer";
 import { headers } from "next/headers";
 import { checkRateLimit, getClientIpFromHeaders } from "@/lib/ratelimit";
+import { logActivity } from "@/lib/activity";
 
 const CommentSchema = z.object({
   postId: z.number(),
@@ -90,6 +91,17 @@ export async function createComment(_prevState: unknown, formData: FormData) {
       };
     }
 
+    // Check for spam keywords
+    const settings = await prisma.siteSettings.findFirst();
+    let isSpam = false;
+    if (settings?.spamKeywords) {
+      const keywords = settings.spamKeywords.split(",").map(k => k.trim().toLowerCase());
+      const contentLower = sanitizedData.content.toLowerCase();
+      if (keywords.some(k => k && contentLower.includes(k))) {
+        isSpam = true;
+      }
+    }
+
     await prisma.comment.create({
       data: {
         postId: sanitizedData.postId,
@@ -97,7 +109,7 @@ export async function createComment(_prevState: unknown, formData: FormData) {
         email: sanitizedData.email,
         website: sanitizedData.website,
         content: sanitizedData.content,
-        status: "PENDING", // Default to pending
+        status: isSpam ? "SPAM" : "PENDING",
       },
     });
 
@@ -105,7 +117,9 @@ export async function createComment(_prevState: unknown, formData: FormData) {
 
     return {
       success: true,
-      message: "Your comment has been submitted and is awaiting moderation.",
+      message: isSpam 
+        ? "Your comment has been flagged for review." 
+        : "Your comment has been submitted and is awaiting moderation.",
     };
   } catch (error) {
     console.error("Comment creation error:", error);
@@ -118,16 +132,24 @@ export async function createComment(_prevState: unknown, formData: FormData) {
 
 export async function approveComment(commentId: number) {
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  if (!session || !["ADMIN", "EDITOR"].includes(role)) {
+  const user = session?.user as any;
+  if (!session || !["ADMIN", "EDITOR"].includes(user?.role)) {
     return { success: false, message: "Unauthorized" };
   }
 
   try {
-    await prisma.comment.update({
+    const comment = await prisma.comment.update({
       where: { id: commentId },
       data: { status: "APPROVED" },
     });
+    
+    await logActivity(
+      Number(user.id),
+      "UPDATE_COMMENT",
+      `Comment #${commentId}`,
+      { status: "APPROVED" }
+    );
+
     revalidatePath("/admin/comments");
     return { success: true };
   } catch {
@@ -137,8 +159,8 @@ export async function approveComment(commentId: number) {
 
 export async function deleteComment(commentId: number) {
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  if (!session || !["ADMIN", "EDITOR"].includes(role)) {
+  const user = session?.user as any;
+  if (!session || !["ADMIN", "EDITOR"].includes(user?.role)) {
     return { success: false, message: "Unauthorized" };
   }
 
@@ -146,9 +168,59 @@ export async function deleteComment(commentId: number) {
     await prisma.comment.delete({
       where: { id: commentId },
     });
+
+    await logActivity(
+      Number(user.id),
+      "DELETE_COMMENT",
+      `Comment #${commentId}`
+    );
+
     revalidatePath("/admin/comments");
+    revalidatePath("/blog");
     return { success: true };
   } catch {
     return { success: false, message: "Failed to delete comment" };
+  }
+}
+
+export async function replyToComment(parentId: number, content: string, postId: number) {
+  const session = await getServerSession(authOptions);
+  const user = session?.user as any;
+  
+  if (!session || !["ADMIN", "EDITOR"].includes(user?.role)) {
+    return { success: false, message: "Unauthorized" };
+  }
+
+  try {
+    if (!content.trim()) {
+      return { success: false, message: "Reply content cannot be empty" };
+    }
+
+    const newComment = await prisma.comment.create({
+      data: {
+        postId,
+        parentId,
+        userId: Number(user.id),
+        name: user.name || "Admin",
+        email: user.email || "admin@eatsmartdaily.com",
+        content: sanitizeHtml(content),
+        status: "APPROVED", // Admin replies are auto-approved
+      },
+    });
+
+    await logActivity(
+      Number(user.id),
+      "REPLY_COMMENT",
+      `Comment #${newComment.id}`,
+      { parentId, postId }
+    );
+
+    revalidatePath("/admin/comments");
+    revalidatePath("/blog");
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Reply error:", error);
+    return { success: false, message: "Failed to post reply" };
   }
 }

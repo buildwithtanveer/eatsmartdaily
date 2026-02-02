@@ -1,14 +1,36 @@
 import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import NewsletterActions from "@/components/admin/newsletter/NewsletterActions";
-import { Mail, Users } from "lucide-react";
+import AdminTableToolbar from "@/components/admin/AdminTableToolbar";
+import AdminTableFooter from "@/components/admin/AdminTableFooter";
+import { Mail, Users, PenTool } from "lucide-react";
+import Link from "next/link";
 
-export default async function NewsletterPage() {
+export default async function NewsletterPage(props: {
+  searchParams: Promise<{ page?: string; limit?: string; search?: string }>;
+}) {
+  const searchParams = await props.searchParams;
   await requirePermission(["ADMIN", "EDITOR"]);
 
-  const subscribers = await prisma.newsletterSubscriber.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(searchParams.limit) || 20));
+  const search = searchParams.search || "";
+
+  const where = search ? {
+    email: { contains: search }
+  } : {};
+
+  const [subscribers, totalSubscribers] = await Promise.all([
+    prisma.newsletterSubscriber.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.newsletterSubscriber.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(totalSubscribers / limit);
 
   return (
     <div className="max-w-[1600px] mx-auto p-6 space-y-6">
@@ -17,10 +39,21 @@ export default async function NewsletterPage() {
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Newsletter Subscribers</h1>
           <p className="text-gray-500 text-sm">Manage your email list subscribers.</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm text-sm font-medium text-gray-600">
-          Total: {subscribers.length}
+        <div className="flex gap-3">
+            <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm text-sm font-medium text-gray-600 flex items-center">
+            Total: {totalSubscribers}
+            </div>
+            <Link 
+                href="/admin/newsletter/compose"
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-sm text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+            >
+                <PenTool size={16} />
+                Compose Newsletter
+            </Link>
         </div>
       </div>
+
+      <AdminTableToolbar searchPlaceholder="Search subscribers..." />
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
         <div className="overflow-x-auto">
@@ -41,8 +74,8 @@ export default async function NewsletterPage() {
                       <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
                         <Users className="w-8 h-8 text-gray-300" />
                       </div>
-                      <p className="font-medium text-gray-900 text-lg">No subscribers yet</p>
-                      <p className="text-sm text-gray-500">People who subscribe to your newsletter will appear here.</p>
+                      <p className="font-medium text-gray-900 text-lg">No subscribers found</p>
+                      <p className="text-sm text-gray-500">Try adjusting your search criteria.</p>
                     </div>
                   </td>
                 </tr>
@@ -82,6 +115,12 @@ export default async function NewsletterPage() {
             </tbody>
           </table>
         </div>
+        <AdminTableFooter 
+          currentPage={page} 
+          totalPages={totalPages} 
+          totalItems={totalSubscribers} 
+          limit={limit} 
+        />
       </div>
     </div>
   );

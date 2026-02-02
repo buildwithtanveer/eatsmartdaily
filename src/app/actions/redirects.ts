@@ -12,7 +12,29 @@ export async function createRedirect(formData: FormData) {
     const session = await requirePermission(["ADMIN", "EDITOR"]);
     const user = session.user as any;
 
-    const source = formData.get("source") as string;
+    const sourceRaw = formData.get("source") as string;
+    let source = sourceRaw;
+    
+    // Normalize source path: strip domain if present
+    try {
+      if (sourceRaw.match(/^https?:\/\//i)) {
+        const url = new URL(sourceRaw);
+        source = url.pathname;
+      }
+    } catch (e) {
+      // If invalid URL, assume it's a path and keep as is
+    }
+
+    // Ensure leading slash
+    if (source && !source.startsWith("/")) {
+      source = "/" + source;
+    }
+
+    // Remove trailing slash if length > 1
+    if (source.length > 1 && source.endsWith("/")) {
+      source = source.slice(0, -1);
+    }
+
     const destination = formData.get("destination") as string;
     const type = formData.get("type") as RedirectType;
 

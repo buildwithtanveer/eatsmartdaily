@@ -22,23 +22,25 @@ export default async function Footer() {
           <div className="text-center md:text-left">
             {settings?.footerLogo ? (
                <div className="mb-2 flex justify-center md:justify-start">
-                 <Image
-                   src={settings.footerLogo}
-                   alt={settings?.siteName || "Eat Smart Daily"}
-                   width={logoWidth}
-                   height={logoHeight}
-                   className="object-contain"
-                 />
+                 <Link href="/">
+                   <Image
+                     src={settings.footerLogo}
+                     alt={settings?.siteName || "Eat Smart Daily"}
+                     width={logoWidth}
+                     height={logoHeight}
+                     className="object-contain"
+                   />
+                 </Link>
                </div>
             ) : (
-               <div className="mb-3 flex justify-center md:justify-start items-center gap-2.5">
+               <Link href="/" className="mb-3 flex justify-center md:justify-start items-center gap-2.5 hover:opacity-90 transition-opacity">
                  <div className="w-10 h-10 bg-green-600 text-white rounded-xl flex items-center justify-center shadow-sm">
                    <UtensilsCrossed size={22} />
                  </div>
                  <h2 className="text-xl font-bold tracking-tight text-gray-900 leading-none">
                    EatSmart<span className="text-green-600">Daily</span>
                  </h2>
-               </div>
+               </Link>
             )}
             <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto md:mx-0">{settings?.logoSubheading || settings?.siteDescription || "Healthy Living Made Simple"}</p>
           </div>

@@ -6,9 +6,15 @@ const globalForPrisma = global as unknown as {
 
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  });
+  (() => {
+    if (!process.env.DATABASE_URL) {
+      console.error("[PRISMA ERROR] DATABASE_URL is not defined in environment variables!");
+    }
+    console.log("[PRISMA] Initializing new PrismaClient...");
+    return new PrismaClient({
+      log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    });
+  })();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

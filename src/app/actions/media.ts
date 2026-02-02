@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { logActivity } from "@/lib/activity";
 
 async function requireMediaPermission() {
   const session = await getServerSession(authOptions);
@@ -34,12 +35,16 @@ export async function getMediaFiles() {
 
 export async function deleteMediaFile(fileName: string) {
   try {
+    const session = await getServerSession(authOptions);
     await requireMediaPermission();
     
     const filePath = path.join(process.cwd(), "public", "uploads", fileName);
     
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
+      
+      await logActivity(Number((session?.user as any).id), "DELETE_MEDIA", "Media", { fileName });
+
       revalidatePath("/admin/media");
       return { success: true };
     } else {

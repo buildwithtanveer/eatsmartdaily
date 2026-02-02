@@ -1,6 +1,7 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect, permanentRedirect } from "next/navigation";
 import { getPostBySlug, PostWithRelations } from "@/lib/data";
+import { getRedirect } from "@/lib/redirect-service";
 import Image from "next/image";
 import Link from "next/link";
 import { BookOpen } from "lucide-react";
@@ -11,6 +12,7 @@ import AuthorBio from "@/components/AuthorBio";
 import MedicallyReviewed from "@/components/MedicallyReviewed";
 import RelatedPosts from "@/components/RelatedPosts";
 import CommentSection from "@/components/CommentSection";
+import PostFAQ from "@/components/PostFAQ";
 import { prisma } from "@/lib/prisma";
 import TrackView from "@/components/TrackView";
 import { getSiteSettings } from "@/lib/data";
@@ -96,68 +98,79 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  
+  try {
+    const post = await getPostBySlug(slug);
 
-  if (!post) return {};
+    if (!post) return {};
 
-  const ogImage = post.featuredImage
-    ? `${process.env.NEXT_PUBLIC_SITE_URL}${post.featuredImage}`
-    : `${process.env.NEXT_PUBLIC_SITE_URL}/og-default.jpg`;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+    const ogImage = post.featuredImage
+      ? (post.featuredImage.startsWith("http")
+          ? post.featuredImage
+          : `${siteUrl}${post.featuredImage}`)
+      : `${siteUrl}/og-default.jpg`;
 
-  const title = discoverTitle(post); // Use optimized title for metadata
+    const title = discoverTitle(post); // Use optimized title for metadata
 
-  return {
-    title: post.metaTitle || title,
-    description: post.metaDescription || post.excerpt || undefined,
-
-    alternates: {
-      canonical: `${process.env.NEXT_PUBLIC_SITE_URL}/blog/${post.slug}`,
-    },
-
-    openGraph: {
-      type: "article",
-      url: `${process.env.NEXT_PUBLIC_SITE_URL}/blog/${post.slug}`,
+    return {
       title: post.metaTitle || title,
       description: post.metaDescription || post.excerpt || undefined,
-      images: [
-        {
-          url: ogImage,
-          width: 1200,
-          height: 630,
-          alt: post.featuredImageAlt || post.title,
-        },
-      ],
-      siteName: "Eat Smart Daily",
-      locale: "en_US",
-      publishedTime: post.publishedAt?.toISOString(),
-      modifiedTime: post.updatedAt.toISOString(),
-      authors: [post.author.name],
-      tags: post.tags.map((t) => t.tag.name),
-    },
 
-    twitter: {
-      card: "summary_large_image",
-      title: post.metaTitle || title,
-      description: post.metaDescription || post.excerpt || undefined,
-      images: [ogImage],
-      creator: "@eatsmartdaily",
-      site: "@eatsmartdaily",
-    },
+      alternates: {
+        canonical: `${siteUrl}/blog/${post.slug}`,
+      },
 
-    authors: [{ name: post.author.name, url: `/author/${post.author.id}` }],
-    keywords: post.tags.map((t) => t.tag.name).join(", "),
+      openGraph: {
+        type: "article",
+        url: `${siteUrl}/blog/${post.slug}`,
+        title: post.metaTitle || title,
+        description: post.metaDescription || post.excerpt || undefined,
+        images: [
+          {
+            url: ogImage,
+            width: 1200,
+            height: 630,
+            alt: post.featuredImageAlt || post.title,
+          },
+        ],
+        siteName: "Eat Smart Daily",
+        locale: "en_US",
+        publishedTime: post.publishedAt?.toISOString(),
+        modifiedTime: post.updatedAt.toISOString(),
+        authors: [post.author.name],
+        tags: post.tags.map((t) => t.tag.name),
+      },
 
-    robots: {
-      index: post.status === "PUBLISHED",
-      follow: true,
-      googleBot: {
+      twitter: {
+        card: "summary_large_image",
+        title: post.metaTitle || title,
+        description: post.metaDescription || post.excerpt || undefined,
+        images: [ogImage],
+        creator: "@eatsmartdaily",
+        site: "@eatsmartdaily",
+      },
+
+      authors: [{ name: post.author.name, url: `/author/${post.author.id}` }],
+      keywords: post.tags.map((t) => t.tag.name).join(", "),
+
+      robots: {
         index: post.status === "PUBLISHED",
         follow: true,
-        "max-image-preview": "large",
-        "max-snippet": -1,
+        googleBot: {
+          index: post.status === "PUBLISHED",
+          follow: true,
+          "max-image-preview": "large",
+          "max-snippet": -1,
+        },
       },
-    },
-  };
+    };
+  } catch (error) {
+    console.error("Error generating metadata for blog post:", error);
+    return {
+      title: "Blog Post | Eat Smart Daily",
+    };
+  }
 }
 
 export default async function BlogPostPage({
@@ -166,12 +179,27 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
-  const settings = await getSiteSettings();
+  
+  try {
+    const post = await getPostBySlug(slug);
 
-  if (!post) {
-    notFound();
-  }
+    if (!post) {
+      // Check for redirect before showing 404
+      const currentPath = `/blog/${slug}`;
+      const redirectRule = await getRedirect(currentPath);
+
+      if (redirectRule) {
+        if (redirectRule.permanent) {
+          permanentRedirect(redirectRule.destination);
+        } else {
+          redirect(redirectRule.destination);
+        }
+      }
+
+      notFound();
+    }
+
+    const settings = await getSiteSettings();
 
   // Calculate reading time
   const wordsPerMinute = 200;
@@ -189,33 +217,39 @@ export default async function BlogPostPage({
   const sanitizedContent = sanitizeHtml(contentWithAnchors);
 
   // JSON-LD Schema
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
-    description: post.metaDescription || post.excerpt || undefined,
-    image: post.featuredImage
-      ? `${process.env.NEXT_PUBLIC_SITE_URL}${post.featuredImage}`
-      : undefined,
-    datePublished: post.publishedAt?.toISOString(),
-    dateModified: post.updatedAt.toISOString(),
-    author: {
-      "@type": "Person",
-      name: post.author.name,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL}/author/${post.author.id}`,
-    },
-    publisher: {
-      "@type": "Organization",
-      name: "Eat Smart Daily",
-      logo: {
-        "@type": "ImageObject",
-        url: `${process.env.NEXT_PUBLIC_SITE_URL}/logo.png`,
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+    
+    const ogImage = post.featuredImage
+      ? (post.featuredImage.startsWith("http")
+          ? post.featuredImage
+          : `${siteUrl}${post.featuredImage}`)
+      : `${siteUrl}/logo.svg`;
+
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      headline: post.title,
+      description: post.metaDescription || post.excerpt || undefined,
+      image: ogImage,
+      datePublished: post.publishedAt?.toISOString(),
+      dateModified: post.updatedAt.toISOString(),
+      author: {
+        "@type": "Person",
+        name: post.author.name,
+        url: `${siteUrl}/author/${post.author.id}`,
       },
-    },
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": `${process.env.NEXT_PUBLIC_SITE_URL}/blog/${post.slug}`,
-    },
+      publisher: {
+        "@type": "Organization",
+        name: "Eat Smart Daily",
+        logo: {
+          "@type": "ImageObject",
+          url: `${siteUrl}/logo.svg`,
+        },
+      },
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": `${siteUrl}/blog/${post.slug}`,
+      },
     ...(post.reviewer && {
       reviewedBy: {
         "@type": "Person",
@@ -229,40 +263,40 @@ export default async function BlogPostPage({
   };
 
   // Breadcrumb Schema
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: process.env.NEXT_PUBLIC_SITE_URL,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Blog",
-        item: `${process.env.NEXT_PUBLIC_SITE_URL}/blog`,
-      },
-      ...(post.category
-        ? [
-            {
-              "@type": "ListItem",
-              position: 3,
-              name: post.category.name,
-              item: `${process.env.NEXT_PUBLIC_SITE_URL}/category/${post.category.slug}`,
-            },
-          ]
-        : []),
-      {
-        "@type": "ListItem",
-        position: post.category ? 4 : 3,
-        name: post.title,
-        item: `${process.env.NEXT_PUBLIC_SITE_URL}/blog/${post.slug}`,
-      },
-    ],
-  };
+    const breadcrumbSchema = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: siteUrl,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Blog",
+          item: `${siteUrl}/blog`,
+        },
+        ...(post.category
+          ? [
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: post.category.name,
+                item: `${siteUrl}/category/${post.category.slug}`,
+              },
+            ]
+          : []),
+        {
+          "@type": "ListItem",
+          position: post.category ? 4 : 3,
+          name: post.title,
+          item: `${siteUrl}/blog/${post.slug}`,
+        },
+      ],
+    };
 
   // FAQ Schema
   const faqSchema =
@@ -550,6 +584,11 @@ export default async function BlogPostPage({
                 />
               )}
 
+              {/* FAQ Section */}
+              {post.faq && Array.isArray(post.faq) && post.faq.length > 0 && (
+                <PostFAQ faqs={post.faq as any} />
+              )}
+
               {/* References */}
               {post.references &&
                 Array.isArray(post.references) &&
@@ -602,17 +641,19 @@ export default async function BlogPostPage({
               )}
 
               {/* Social Share Buttons */}
-              <SocialShareButtons
-                url={`${process.env.NEXT_PUBLIC_SITE_URL}/blog/${post.slug}`}
-                title={post.title}
-                description={post.metaDescription || post.excerpt || ""}
-              />
+                <SocialShareButtons
+                  url={`${siteUrl}/blog/${post.slug}`}
+                  title={post.title}
+                  description={post.metaDescription || post.excerpt || ""}
+                />
 
               {/* Author Bio */}
               <AuthorBio author={post.author} />
-
+              
               {/* Comments */}
-              <CommentSection postId={post.id} comments={post.comments} />
+              {post.allowComments && (
+                <CommentSection postId={post.id} comments={post.comments} />
+              )}
 
               {/* Related Posts */}
               <RelatedPosts
@@ -751,4 +792,8 @@ export default async function BlogPostPage({
       </div>
     </>
   );
+  } catch (error) {
+    console.error("Error loading blog post page:", error);
+    throw error; // Let the error boundary handle it
+  }
 }

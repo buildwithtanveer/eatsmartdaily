@@ -28,10 +28,17 @@ export async function createPost(formData: FormData) {
   const showInSlider = formData.get("showInSlider") === "on";
   const showInPopular = formData.get("showInPopular") === "on";
   const showInLatest = formData.get("showInLatest") === "on";
+  const allowComments = formData.get("allowComments") === "on";
+  const isFeatured = formData.get("isFeatured") === "on";
 
   const metaTitle = formData.get("metaTitle") as string;
   const metaDescription = formData.get("metaDescription") as string;
   
+  const reviewerId = formData.get("reviewerId") ? Number(formData.get("reviewerId")) : null;
+  const faq = formData.get("faq") ? JSON.parse(formData.get("faq") as string) : null;
+  const references = formData.get("references") ? JSON.parse(formData.get("references") as string) : null;
+  const tags = formData.get("tags") ? JSON.parse(formData.get("tags") as string) : [];
+
   const scheduledDate = formData.get("publishedAt") ? new Date(formData.get("publishedAt") as string) : null;
 
   if (!title) return { success: false, message: "Title is required" };
@@ -65,8 +72,16 @@ export async function createPost(formData: FormData) {
         showInSlider,
         showInPopular,
         showInLatest,
+        allowComments,
+        isFeatured,
         metaTitle,
         metaDescription,
+        faq,
+        references,
+        reviewerId,
+        tags: {
+          create: tags.map((tagId: number) => ({ tagId }))
+        },
         authorId: Number((session.user as any).id),
         publishedAt,
       },
@@ -77,7 +92,7 @@ export async function createPost(formData: FormData) {
     revalidatePath("/admin/posts");
     revalidatePath("/admin/recipes");
     revalidatePath("/"); // Update home page
-    return { success: true };
+    return { success: true, post };
   } catch (error) {
     console.error("Failed to create post:", error);
     return { success: false, message: "Failed to create post" };
@@ -112,10 +127,17 @@ export async function updatePost(id: number, formData: FormData) {
   const showInSlider = formData.get("showInSlider") === "on";
   const showInPopular = formData.get("showInPopular") === "on";
   const showInLatest = formData.get("showInLatest") === "on";
+  const allowComments = formData.get("allowComments") === "on";
+  const isFeatured = formData.get("isFeatured") === "on";
 
   const metaTitle = formData.get("metaTitle") as string;
   const metaDescription = formData.get("metaDescription") as string;
-  
+
+  const reviewerId = formData.get("reviewerId") ? Number(formData.get("reviewerId")) : null;
+  const faq = formData.get("faq") ? JSON.parse(formData.get("faq") as string) : null;
+  const references = formData.get("references") ? JSON.parse(formData.get("references") as string) : null;
+  const tags = formData.get("tags") ? JSON.parse(formData.get("tags") as string) : [];
+
   const scheduledDate = formData.get("publishedAt") ? new Date(formData.get("publishedAt") as string) : null;
 
   try {
@@ -150,7 +172,7 @@ export async function updatePost(id: number, formData: FormData) {
         publishedAt = null;
     }
 
-    await prisma.post.update({
+    const updatedPost = await prisma.post.update({
       where: { id },
       data: {
         title,
@@ -163,8 +185,17 @@ export async function updatePost(id: number, formData: FormData) {
         showInSlider,
         showInPopular,
         showInLatest,
+        allowComments,
+        isFeatured,
         metaTitle,
         metaDescription,
+        faq,
+        references,
+        reviewerId,
+        tags: {
+          deleteMany: {},
+          create: tags.map((tagId: number) => ({ tagId }))
+        },
         publishedAt,
       },
     });
@@ -172,11 +203,10 @@ export async function updatePost(id: number, formData: FormData) {
     await logActivity(Number(user.id), "UPDATE_POST", "Post", { id, title });
 
     revalidatePath("/admin/posts");
-    revalidatePath("/admin/recipes");
-    revalidatePath("/");
     revalidatePath(`/blog/${slug}`);
+    revalidatePath("/");
     
-    return { success: true };
+    return { success: true, post: updatedPost };
   } catch (error) {
     console.error("Failed to update post:", error);
     return { success: false, message: "Failed to update post" };
@@ -254,7 +284,13 @@ export async function deletePost(id: number) {
   }
 
   try {
+    // Manually delete related tags first since Cascade is missing in Schema for PostTag
+    await prisma.postTag.deleteMany({ where: { postId: id } });
+
     await prisma.post.delete({ where: { id } });
+
+    await logActivity(Number(user.id), "DELETE_POST", "Post", { id });
+
     revalidatePath("/admin/posts");
     revalidatePath("/admin/recipes");
     return { success: true };
@@ -292,6 +328,9 @@ export async function togglePostStatus(id: number, currentStatus: string) {
         publishedAt: newStatus === "PUBLISHED" ? new Date() : undefined // Update if publishing
       }
     });
+
+    await logActivity(Number(user.id), "TOGGLE_POST_STATUS", "Post", { id, status: newStatus });
+
     revalidatePath("/admin/posts");
     revalidatePath("/admin/recipes");
     revalidatePath("/");

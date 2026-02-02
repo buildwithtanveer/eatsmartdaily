@@ -4,22 +4,44 @@ import Link from "next/link";
 import PostTable from "@/components/admin/posts/PostTable";
 import { Role } from "@prisma/client";
 
-export default async function AdminPosts() {
+export default async function AdminPosts(props: {
+  searchParams: Promise<{ page?: string; limit?: string; search?: string }>;
+}) {
+  const searchParams = await props.searchParams;
   const session = await requirePermission(["ADMIN", "EDITOR", "AUTHOR"]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const user = session?.user as any;
   const role = user?.role as Role;
 
-  const where = role === "AUTHOR" ? { authorId: Number(user.id) } : {};
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(searchParams.limit) || 20));
+  const search = searchParams.search || "";
 
-  const posts = await prisma.post.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: {
-      category: true,
-      author: true,
-    },
-  });
+  const where: any = {
+    ...(role === "AUTHOR" ? { authorId: Number(user.id) } : {}),
+    ...(search ? {
+      OR: [
+        { title: { contains: search } },
+        { slug: { contains: search } },
+      ]
+    } : {}),
+  };
+
+  const [posts, totalPosts] = await Promise.all([
+    prisma.post.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        category: true,
+        author: true,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.post.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(totalPosts / limit);
 
   return (
     <div className="max-w-[1600px] mx-auto p-6 space-y-6">
@@ -37,7 +59,15 @@ export default async function AdminPosts() {
       </div>
 
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <PostTable posts={posts as any} />
+      <PostTable 
+        posts={posts as any} 
+        pagination={{
+          currentPage: page,
+          totalPages,
+          totalPosts,
+          limit
+        }}
+      />
     </div>
   );
 }

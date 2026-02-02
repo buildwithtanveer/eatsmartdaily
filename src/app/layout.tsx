@@ -11,6 +11,7 @@ import EzoicScript from "@/components/EzoicScript";
 import WebVitals from "@/components/WebVitals";
 import CookieConsent from "@/components/CookieConsent";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
+import SkipLink from "@/components/SkipLink";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -33,10 +34,12 @@ export async function generateMetadata(): Promise<Metadata> {
     settings?.siteDescription ||
     "Discover expert-backed nutrition tips, healthy recipes, and diet guides to help you eat smarter and live healthier every day.";
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+
   return {
-    metadataBase: new URL("https://eatsmartdaily.com"),
+    metadataBase: new URL(siteUrl),
     alternates: {
-      canonical: "./",
+      canonical: "/",
     },
     manifest: "/manifest.webmanifest",
     title: {
@@ -67,6 +70,11 @@ export async function generateMetadata(): Promise<Metadata> {
         "max-snippet": -1,
       },
     },
+    appleWebApp: {
+      capable: true,
+      title: siteName,
+      statusBarStyle: "default",
+    },
     formatDetection: {
       email: false,
       address: false,
@@ -75,13 +83,13 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       locale: "en_US",
-      url: "https://eatsmartdaily.com",
+      url: siteUrl,
       title: `${siteName} - Healthy Food, Diet & Nutrition Tips`,
       description: siteDescription,
       siteName: siteName,
       images: [
         {
-          url: "/logo.svg",
+          url: `${siteUrl}/logo.svg`,
           width: 1200,
           height: 630,
           alt: siteName,
@@ -115,6 +123,7 @@ export default async function RootLayout({
         suppressHydrationWarning
         className="antialiased min-h-screen flex flex-col font-sans"
       >
+        <SkipLink />
         {settings?.googleAnalyticsId && (
           <Suspense fallback={null}>
             <GoogleAnalytics gaId={settings.googleAnalyticsId} />

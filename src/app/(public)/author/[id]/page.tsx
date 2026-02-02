@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
-import { notFound } from "next/navigation";
+import { notFound, redirect, permanentRedirect } from "next/navigation";
 import { FaFacebook, FaTwitter, FaLinkedin, FaInstagram } from "react-icons/fa";
 import { Metadata } from "next";
 import { getAuthorById } from "@/lib/data";
+import { getRedirect } from "@/lib/redirect-service";
 
 export async function generateMetadata(props: {
   params: Promise<{ id: string }>;
@@ -19,6 +20,7 @@ export async function generateMetadata(props: {
   }
 
   const author = await getAuthorById(authorId);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
 
   if (!author) {
     return {
@@ -30,13 +32,14 @@ export async function generateMetadata(props: {
     title: `${author.name} | Author at Eat Smart Daily`,
     description: author.bio || `Read articles by ${author.name} on Eat Smart Daily.`,
     alternates: {
-      canonical: `https://eatsmartdaily.com/author/${params.id}`,
+      canonical: `${siteUrl}/author/${params.id}`,
     },
     openGraph: {
       title: `${author.name} | Author at Eat Smart Daily`,
       description: author.bio || `Read articles by ${author.name} on Eat Smart Daily.`,
-      images: author.image ? [{ url: author.image }] : [],
+      images: author.image ? [{ url: author.image }] : [{ url: `${siteUrl}/logo.svg` }],
       type: "profile",
+      url: `${siteUrl}/author/${params.id}`,
     },
   };
 }
@@ -50,8 +53,21 @@ export default async function AuthorPage(props: { params: Promise<{ id: string }
   }
 
   const author = await getAuthorById(authorId);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
 
   if (!author) {
+    // Check for redirect
+    const currentPath = `/author/${authorId}`;
+    const redirectRule = await getRedirect(currentPath);
+
+    if (redirectRule) {
+      if (redirectRule.permanent) {
+        permanentRedirect(redirectRule.destination);
+      } else {
+        redirect(redirectRule.destination);
+      }
+    }
+
     return notFound();
   }
 
@@ -60,8 +76,8 @@ export default async function AuthorPage(props: { params: Promise<{ id: string }
     "@type": "Person",
     name: author.name,
     jobTitle: author.jobTitle || "Author at Eat Smart Daily",
-    url: `https://eatsmartdaily.com/author/${author.id}`,
-    image: author.image || "https://eatsmartdaily.com/logo.svg",
+    url: `${siteUrl}/author/${author.id}`,
+    image: author.image || `${siteUrl}/logo.svg`,
     description: author.bio,
     sameAs: [
       author.socialFacebook,

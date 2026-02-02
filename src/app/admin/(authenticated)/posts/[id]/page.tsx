@@ -14,12 +14,24 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
   const user = session?.user as any;
   const role = user?.role as Role;
   const { id } = await params;
+  const postId = Number(id);
 
-  const [post, categories, internalLinks] = await Promise.all([
+  const [post, categories, tags, internalLinks, users] = await Promise.all([
     prisma.post.findUnique({
-      where: { id: Number(id) },
+      where: { id: postId },
+      include: {
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
     }),
     prisma.category.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.tag.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -28,6 +40,10 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
       orderBy: { publishedAt: "desc" },
       take: 50,
       select: { id: true, title: true, slug: true },
+    }),
+    prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "EDITOR"] } },
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -41,7 +57,13 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
 
   return (
     <div className="p-6">
-      <PostForm post={post} categories={categories} internalLinks={internalLinks} />
+      <PostForm 
+        post={post} 
+        categories={categories} 
+        tags={tags}
+        internalLinks={internalLinks} 
+        users={users}
+      />
     </div>
   );
 }

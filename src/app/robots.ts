@@ -1,6 +1,8 @@
 import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+  
   return {
     rules: [
       {
@@ -9,6 +11,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin", "/api", "/search", "/*?s="],
       },
     ],
-    sitemap: "https://eatsmartdaily.com/sitemap.xml",
+    sitemap: `${siteUrl}/sitemap.xml`,
   };
 }

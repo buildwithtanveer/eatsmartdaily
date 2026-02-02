@@ -24,6 +24,8 @@ type Settings = {
   logoWidth: number;
   logoHeight: number;
   useDefaultLogoSize: boolean;
+  spamKeywords: string | null;
+  blockedIps: string | null;
 };
 
 export default function SettingsForm({ initialSettings }: { initialSettings: Settings }) {
@@ -246,6 +248,45 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
                 </div>
               );
             })}
+          </div>
+        </section>
+
+        {/* Spam Protection Section */}
+        <section className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600">
+              <CheckCircle size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Spam Protection</h3>
+              <p className="text-sm text-gray-500">Manage comment moderation filters.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-8">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-semibold text-gray-700">Blacklisted Words</label>
+              <textarea
+                name="spamKeywords"
+                defaultValue={initialSettings.spamKeywords || ""}
+                rows={3}
+                className="w-full border border-gray-200 p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all resize-none"
+                placeholder="viagra, casino, crypto... (comma separated)"
+              />
+              <p className="text-xs text-gray-500">Comments containing these words will be automatically flagged as SPAM.</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-semibold text-gray-700">Blocked IP Addresses</label>
+              <textarea
+                name="blockedIps"
+                defaultValue={initialSettings.blockedIps || ""}
+                rows={3}
+                className="w-full border border-gray-200 p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all resize-none font-mono text-sm"
+                placeholder="192.168.1.1, 10.0.0.1... (comma separated)"
+              />
+              <p className="text-xs text-gray-500">Users with these IP addresses will be prevented from commenting.</p>
+            </div>
           </div>
         </section>
 

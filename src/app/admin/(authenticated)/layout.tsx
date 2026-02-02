@@ -3,6 +3,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import { requireDashboardAccess } from "@/lib/auth";
 import { Metadata } from "next";
 import { Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard | Eat Smart Daily",
@@ -19,16 +20,24 @@ export default async function AdminLayout({
 }) {
   const session = await requireDashboardAccess();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userRole = (session.user as any).role as Role;
+  const userId = Number((session.user as any).id);
+  
+  // Fetch latest user data to ensure profile image is up to date
+  const dbUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, image: true, role: true }
+  });
+
   const user = {
-    ...session.user,
-    role: userRole as string
+    name: dbUser?.name || session.user?.name,
+    image: dbUser?.image || session.user?.image,
+    role: (dbUser?.role || (session.user as any).role) as string
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex" suppressHydrationWarning>
       {/* Sidebar */}
-      <AdminSidebar role={userRole} />
+      <AdminSidebar role={user.role as Role} />
 
       {/* Main Content Area */}
       <div className="flex-1 ml-72 flex flex-col min-h-screen" suppressHydrationWarning>

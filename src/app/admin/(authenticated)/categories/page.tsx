@@ -2,13 +2,37 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/auth";
 import AddCategoryForm from "@/components/admin/categories/AddCategoryForm";
 import CategoryRow from "@/components/admin/categories/CategoryRow";
+import AdminTableToolbar from "@/components/admin/AdminTableToolbar";
+import AdminTableFooter from "@/components/admin/AdminTableFooter";
 
-export default async function AdminCategories() {
+export default async function AdminCategories(props: {
+  searchParams: Promise<{ page?: string; limit?: string; search?: string }>;
+}) {
+  const searchParams = await props.searchParams;
   await requirePermission(["ADMIN", "EDITOR"]);
+
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(searchParams.limit) || 20));
+  const search = searchParams.search || "";
+
+  const where = search ? {
+    OR: [
+      { name: { contains: search } },
+      { slug: { contains: search } },
+    ]
+  } : {};
   
-  const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" }
-  });
+  const [categories, totalCategories] = await Promise.all([
+    prisma.category.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.category.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(totalCategories / limit);
 
   return (
     <div className="max-w-[1600px] mx-auto p-6 space-y-6">
@@ -18,11 +42,13 @@ export default async function AdminCategories() {
           <p className="text-gray-500 text-sm">Organize your content with categories.</p>
         </div>
         <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm text-sm font-medium text-gray-600">
-          Total: {categories.length}
+          Total: {totalCategories}
         </div>
       </div>
 
       <AddCategoryForm />
+
+      <AdminTableToolbar searchPlaceholder="Search categories..." />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full">
@@ -50,6 +76,12 @@ export default async function AdminCategories() {
             )}
           </tbody>
         </table>
+        <AdminTableFooter 
+          currentPage={page} 
+          totalPages={totalPages} 
+          totalItems={totalCategories} 
+          limit={limit} 
+        />
       </div>
     </div>
   );

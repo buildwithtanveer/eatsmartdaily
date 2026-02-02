@@ -6,7 +6,6 @@
 **Build Status:** ✅ Verified (0 errors, 50 pages)
 
 ---
-
 ## TABLE OF CONTENTS
 
 1. [Prerequisites & Requirements](#prerequisites--requirements)
@@ -297,8 +296,8 @@ WHERE table_schema = 'eatsmartdaily';
 5. Import settings:
    - **Framework Preset:** Next.js
    - **Root Directory:** ./
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `.next`
+   - **Build Command:** `npm run build` (We updated this script in package.json to include `prisma db push`)
+   - **Install Command:** `npm install`
 
 ### Step 3: Configure Environment Variables
 

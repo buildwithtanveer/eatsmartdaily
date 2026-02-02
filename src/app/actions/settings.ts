@@ -5,6 +5,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const SettingsSchema = z.object({
   siteName: z.string().min(2).max(191),
@@ -26,10 +29,13 @@ const SettingsSchema = z.object({
   logoWidth: z.coerce.number().int().optional(),
   logoHeight: z.coerce.number().int().optional(),
   useDefaultLogoSize: z.coerce.boolean().optional(),
+  spamKeywords: z.string().optional(),
+  blockedIps: z.string().optional(),
 });
 
 export async function updateSettings(_prevState: any, formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
+  const user = session?.user as any;
 
   const validatedFields = SettingsSchema.safeParse({
     siteName: formData.get("siteName") || "",
@@ -51,6 +57,8 @@ export async function updateSettings(_prevState: any, formData: FormData) {
     logoWidth: formData.get("logoWidth"),
     logoHeight: formData.get("logoHeight"),
     useDefaultLogoSize: formData.get("useDefaultLogoSize") === "on",
+    spamKeywords: formData.get("spamKeywords") || "",
+    blockedIps: formData.get("blockedIps") || "",
   });
 
   if (!validatedFields.success) {
@@ -77,7 +85,9 @@ export async function updateSettings(_prevState: any, formData: FormData) {
       });
     }
 
-    revalidatePath("/");
+    await logActivity(Number(user.id), "UPDATE_SETTINGS", "Settings", { ...validatedFields.data });
+
+    revalidatePath("/", "layout");
     return { success: true, message: "Settings updated successfully" };
   } catch (error) {
     console.error("Settings update error:", error);

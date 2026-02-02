@@ -1,20 +1,22 @@
 import Sidebar from "@/components/Sidebar";
 import { Metadata } from "next";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "Read our Privacy Policy to understand how we collect, use, and protect your information at Eat Smart Daily.",
   alternates: {
-    canonical: "https://eatsmartdaily.com/privacy-policy",
+    canonical: `${siteUrl}/privacy-policy`,
   },
   openGraph: {
     title: "Privacy Policy | Eat Smart Daily",
     description: "Read our Privacy Policy to understand how we collect, use, and protect your information at Eat Smart Daily.",
-    url: "https://eatsmartdaily.com/privacy-policy",
+    url: `${siteUrl}/privacy-policy`,
     type: "website",
     images: [
       {
-        url: "/logo.svg",
+        url: `${siteUrl}/logo.svg`,
         width: 1200,
         height: 630,
         alt: "Eat Smart Daily",
@@ -24,8 +26,42 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPolicyPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        name: "Privacy Policy",
+        description:
+          "Read our Privacy Policy to understand how we collect, use, and protect your information at Eat Smart Daily.",
+        url: `${siteUrl}/privacy-policy`,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: siteUrl,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Privacy Policy",
+            item: `${siteUrl}/privacy-policy`,
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* LEFT CONTENT COLUMN */}
       <div className="lg:col-span-8">
         <h1 className="text-3xl font-bold mb-6 text-gray-800 border-b pb-2">Privacy Policy</h1>

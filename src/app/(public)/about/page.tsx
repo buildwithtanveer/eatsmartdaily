@@ -2,20 +2,22 @@ import Sidebar from "@/components/Sidebar";
 import { getSiteSettings } from "@/lib/data";
 import { Metadata } from "next";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+
 export const metadata: Metadata = {
   title: "About Us",
   description: "Learn about Eat Smart Daily's mission to provide evidence-based nutrition tips, healthy recipes, and expert wellness advice.",
   alternates: {
-    canonical: "https://eatsmartdaily.com/about",
+    canonical: `${siteUrl}/about`,
   },
   openGraph: {
     title: "About Us | Eat Smart Daily",
     description: "Learn about Eat Smart Daily's mission to provide evidence-based nutrition tips, healthy recipes, and expert wellness advice.",
-    url: "https://eatsmartdaily.com/about",
+    url: `${siteUrl}/about`,
     type: "website",
     images: [
       {
-        url: "/logo.svg",
+        url: `${siteUrl}/logo.svg`,
         width: 1200,
         height: 630,
         alt: "Eat Smart Daily",
@@ -31,8 +33,8 @@ export default async function AboutPage() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: settings?.siteName || "Eat Smart Daily",
-    url: "https://eatsmartdaily.com",
-    logo: "https://eatsmartdaily.com/logo.svg",
+    url: siteUrl,
+    logo: `${siteUrl}/logo.svg`,
     description: settings?.siteDescription || "Eat Smart Daily provides expert-backed nutrition tips, healthy recipes, and diet guides.",
     sameAs: [
       settings?.socialFacebook,

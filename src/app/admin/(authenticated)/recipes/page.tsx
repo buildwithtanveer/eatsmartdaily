@@ -5,11 +5,18 @@ import PostTable from "@/components/admin/posts/PostTable"; // Reusing the power
 import { Role, Prisma } from "@prisma/client";
 import { UtensilsCrossed } from "lucide-react";
 
-export default async function RecipesPage() {
+export default async function RecipesPage(props: {
+  searchParams: Promise<{ page?: string; limit?: string; search?: string }>;
+}) {
+  const searchParams = await props.searchParams;
   const session = await requirePermission(["ADMIN", "EDITOR", "AUTHOR"]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const user = session?.user as any;
   const role = user?.role as Role;
+
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(searchParams.limit) || 20));
+  const search = searchParams.search || "";
 
   const recipeCategory = await prisma.category.findFirst({
     where: { 
@@ -22,18 +29,34 @@ export default async function RecipesPage() {
     }
   });
 
-  const where: Prisma.PostWhereInput = { categoryId: recipeCategory?.id };
+  const where: Prisma.PostWhereInput = { 
+    categoryId: recipeCategory?.id,
+    ...(search ? {
+      OR: [
+        { title: { contains: search } },
+        { slug: { contains: search } },
+      ]
+    } : {}),
+  };
+  
   if (role === "AUTHOR") {
     where.authorId = Number(user.id);
   }
 
-  const posts = recipeCategory
-    ? await prisma.post.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        include: { author: true, category: true },
-      })
-    : [];
+  const [posts, totalPosts] = recipeCategory
+    ? await Promise.all([
+        prisma.post.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          include: { author: true, category: true },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.post.count({ where }),
+      ])
+    : [[], 0];
+
+  const totalPages = Math.ceil(totalPosts / limit);
 
   return (
     <div className="max-w-[1600px] mx-auto p-6 space-y-6">
@@ -62,7 +85,15 @@ export default async function RecipesPage() {
       )}
 
       {recipeCategory && (
-        <PostTable posts={posts} />
+        <PostTable 
+          posts={posts as any} 
+          pagination={{
+            currentPage: page,
+            totalPages,
+            totalPosts,
+            limit
+          }}
+        />
       )}
     </div>
   );

@@ -19,6 +19,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     select: { id: true, createdAt: true },
   });
 
+  const tags = await prisma.tag.findMany({
+    select: { slug: true },
+  });
+
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
 
   const staticPages = [
@@ -61,6 +65,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: author.createdAt,
       changeFrequency: "monthly" as const,
       priority: 0.5,
+    })),
+    ...tags.map((tag) => ({
+      url: `${baseUrl}/tag/${tag.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
     })),
   ];
 }

@@ -2,47 +2,85 @@ import Link from "next/link";
 import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
 import { Metadata } from "next";
+import { redirect, permanentRedirect } from "next/navigation";
 import { getCategoryBySlug } from "@/lib/data";
+import { getRedirect } from "@/lib/redirect-service";
+import Pagination from "@/components/Pagination";
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }): Promise<Metadata> {
   const params = await props.params;
-  const category = await getCategoryBySlug(params.slug);
+  const searchParams = await props.searchParams;
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  
+  try {
+    const category = await getCategoryBySlug(params.slug, page);
 
-  if (!category) {
+    if (!category) {
+      return {
+        title: "Category Not Found",
+      };
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
     return {
-      title: "Category Not Found",
-    };
-  }
-
-  return {
-    title: `${category.name} | Eat Smart Daily`,
-    description: `Explore our articles about ${category.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
-    keywords: [category.name, "health", "nutrition", "articles", "blog", "tips"],
-    alternates: {
-      canonical: `https://eatsmartdaily.com/category/${params.slug}`,
-    },
-    openGraph: {
       title: `${category.name} | Eat Smart Daily`,
       description: `Explore our articles about ${category.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
-      url: `https://eatsmartdaily.com/category/${params.slug}`,
-      type: "website",
-    },
-  };
+      keywords: [category.name, "health", "nutrition", "articles", "blog", "tips"],
+      alternates: {
+        canonical: `${siteUrl}/category/${params.slug}`,
+      },
+      openGraph: {
+        title: `${category.name} | Eat Smart Daily`,
+        description: `Explore our articles about ${category.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
+        url: `${siteUrl}/category/${params.slug}`,
+        type: "website",
+      },
+    };
+  } catch (error) {
+    console.error("Error generating metadata for category:", error);
+    return {
+      title: "Category | Eat Smart Daily",
+    };
+  }
 }
 
-export default async function CategoryPage(props: { params: Promise<{ slug: string }> }) {
+export default async function CategoryPage(props: { 
+  params: Promise<{ slug: string }>,
+  searchParams: Promise<{ page?: string }>
+}) {
   const params = await props.params;
-  const category = await getCategoryBySlug(params.slug);
+  const searchParams = await props.searchParams;
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const limit = 12;
+  
+  try {
+    const category = await getCategoryBySlug(params.slug, page, limit);
 
-  if (!category) return (
-    <div className="max-w-6xl mx-auto p-6 text-center py-20">
-      <h1 className="text-3xl font-bold text-gray-800">Category Not Found</h1>
-      <Link href="/" className="text-green-600 hover:underline mt-4 inline-block">Return Home</Link>
-    </div>
-  );
+    if (!category) {
+      // Check for redirect
+      const currentPath = `/category/${params.slug}`;
+      const redirectRule = await getRedirect(currentPath);
 
+      if (redirectRule) {
+        if (redirectRule.permanent) {
+          permanentRedirect(redirectRule.destination);
+        } else {
+          redirect(redirectRule.destination);
+        }
+      }
+
+      return (
+        <div className="max-w-6xl mx-auto p-6 text-center py-20">
+        <h1 className="text-3xl font-bold text-gray-800">Category Not Found</h1>
+        <Link href="/" className="text-green-600 hover:underline mt-4 inline-block">Return Home</Link>
+      </div>
+    );
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -50,7 +88,7 @@ export default async function CategoryPage(props: { params: Promise<{ slug: stri
         "@type": "CollectionPage",
         name: category.name,
         description: `Explore our articles about ${category.name}. Expert tips, guides, and advice on Eat Smart Daily.`,
-        url: `https://eatsmartdaily.com/category/${category.slug}`,
+        url: `${siteUrl}/category/${category.slug}`,
       },
       {
         "@type": "BreadcrumbList",
@@ -59,13 +97,13 @@ export default async function CategoryPage(props: { params: Promise<{ slug: stri
             "@type": "ListItem",
             "position": 1,
             "name": "Home",
-            "item": "https://eatsmartdaily.com",
+            "item": siteUrl,
           },
           {
             "@type": "ListItem",
             "position": 2,
             "name": category.name,
-            "item": `https://eatsmartdaily.com/category/${category.slug}`,
+            "item": `${siteUrl}/category/${category.slug}`,
           },
         ],
       },
@@ -126,6 +164,12 @@ export default async function CategoryPage(props: { params: Promise<{ slug: stri
                 </div>
               </div>
             ))}
+            
+            <Pagination 
+              currentPage={category.currentPage} 
+              totalPages={category.totalPages} 
+              baseUrl={`/category/${category.slug}`} 
+            />
           </div>
         )}
       </div>
@@ -138,4 +182,8 @@ export default async function CategoryPage(props: { params: Promise<{ slug: stri
       </div>
     </div>
   );
+  } catch (error) {
+    console.error("Error loading category page:", error);
+    throw error;
+  }
 }

@@ -65,6 +65,10 @@ export default function AdUnit({
 
   const dimensions = getAdDimensions();
 
+  const formattedAdClient = adClient 
+    ? (adClient.startsWith('ca-pub-') ? adClient : `ca-pub-${adClient}`)
+    : '';
+
   return (
     <div
       ref={ref}
@@ -99,7 +103,7 @@ export default function AdUnit({
               <ins
                 className="adsbygoogle"
                 style={{ display: 'block' }}
-                data-ad-client={adClient.startsWith('ca-pub-') ? adClient : `ca-pub-${adClient}`}
+                data-ad-client={formattedAdClient}
                 data-ad-slot={adSlot}
                 data-ad-format="auto"
                 data-full-width-responsive="true"

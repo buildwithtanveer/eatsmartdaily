@@ -15,13 +15,18 @@ import DisplayAd from "@/components/DisplayAd";
 import { getHomePageData, getSiteSettings } from "@/lib/data";
 import { Metadata } from "next";
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: "/",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+  
+  return {
+    alternates: {
+      canonical: `${siteUrl}/`,
+    },
+  };
+}
 
 export default async function HomePage() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
   const settings = await getSiteSettings();
   const {
     sliderPosts,
@@ -37,21 +42,21 @@ export default async function HomePage() {
     "@graph": [
       {
         "@type": "WebSite",
-        name: "Eat Smart Daily",
-        url: "https://eatsmartdaily.com",
+        name: settings?.siteName || "Eat Smart Daily",
+        url: siteUrl,
         potentialAction: {
           "@type": "SearchAction",
-          target: "https://eatsmartdaily.com/search?q={search_term_string}",
+          target: `${siteUrl}/search?q={search_term_string}`,
           "query-input": "required name=search_term_string",
         },
       },
       {
         "@type": "Organization",
         name: settings?.siteName || "Eat Smart Daily",
-        url: "https://eatsmartdaily.com",
+        url: siteUrl,
         logo: {
           "@type": "ImageObject",
-          url: "https://eatsmartdaily.com/logo.svg",
+          url: `${siteUrl}/logo.svg`,
           width: 600,
           height: 60,
         },
@@ -69,7 +74,7 @@ export default async function HomePage() {
   return (
     <main className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white">
       <h1 className="sr-only">
-        Eat Smart Daily - Healthy Recipes, Diet Tips & Nutrition Advice
+        {settings?.siteName || "Eat Smart Daily"} - Evidence-Based Nutrition Tips, Healthy Recipes & Expert Wellness Advice
       </h1>
       <script
         type="application/ld+json"

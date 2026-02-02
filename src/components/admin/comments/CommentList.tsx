@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { approveComment, deleteComment } from "@/app/actions/comments";
+import { useState, useTransition } from "react";
+import { approveComment, deleteComment, replyToComment } from "@/app/actions/comments";
 import { 
   Check, 
   Trash2, 
   MessageSquare, 
   ExternalLink, 
   Clock,
+  Reply,
+  X,
+  Send
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import AdminPagination from "@/components/admin/AdminPagination";
 
 type Comment = {
   id: number;
@@ -19,13 +24,45 @@ type Comment = {
   status: "PENDING" | "APPROVED" | "SPAM";
   createdAt: Date;
   post: {
+    id: number;
     title: string;
     slug: string;
   };
 };
 
-export default function CommentList({ initialComments }: { initialComments: Comment[] }) {
+interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  limit: number;
+}
+
+export default function CommentList({ 
+  initialComments,
+  pagination 
+}: { 
+  initialComments: Comment[];
+  pagination: PaginationInfo;
+}) {
   const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [replyingId, setReplyingId] = useState<number | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", page.toString());
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleLimitChange = (limit: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("limit", limit.toString());
+    params.set("page", "1");
+    router.push(`?${params.toString()}`);
+  };
 
   const handleApprove = async (id: number) => {
     setLoadingId(id);
@@ -46,6 +83,21 @@ export default function CommentList({ initialComments }: { initialComments: Comm
     }
   };
 
+  const handleReplySubmit = async (comment: Comment) => {
+    if (!replyContent.trim()) return;
+    
+    setLoadingId(comment.id);
+    const result = await replyToComment(comment.id, replyContent, comment.post.id);
+    setLoadingId(null);
+    
+    if (result.success) {
+      setReplyingId(null);
+      setReplyContent("");
+    } else {
+      alert(result.message);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -56,8 +108,33 @@ export default function CommentList({ initialComments }: { initialComments: Comm
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <table className="w-full">
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-end items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Show</span>
+          <select
+            value={pagination.limit}
+            onChange={(e) => handleLimitChange(Number(e.target.value))}
+            className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-black/5"
+          >
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative">
+        {/* Loading overlay */}
+        {isPending && (
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-20 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full">
         <thead>
           <tr className="border-b bg-gray-50/50">
             <th className="p-4 text-left font-semibold text-gray-600 w-[25%]">Author</th>
@@ -106,6 +183,42 @@ export default function CommentList({ initialComments }: { initialComments: Comm
                   <div className="text-sm text-gray-700 leading-relaxed">
                     {comment.content}
                   </div>
+                  
+                  {/* Reply Form */}
+                  {replyingId === comment.id && (
+                    <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder="Write a reply..."
+                        className="w-full text-sm border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[80px]"
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button
+                          onClick={() => {
+                            setReplyingId(null);
+                            setReplyContent("");
+                          }}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleReplySubmit(comment)}
+                          disabled={loadingId === comment.id || !replyContent.trim()}
+                          className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {loadingId === comment.id ? (
+                            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Send size={12} />
+                          )}
+                          Reply
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </td>
                 <td className="p-4 align-top">
                   <div className="flex items-start gap-2">
@@ -141,6 +254,21 @@ export default function CommentList({ initialComments }: { initialComments: Comm
                 </td>
                 <td className="p-4 align-top text-right">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        if (replyingId === comment.id) {
+                          setReplyingId(null);
+                        } else {
+                          setReplyingId(comment.id);
+                          setReplyContent("");
+                        }
+                      }}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                      title="Reply"
+                    >
+                      {replyingId === comment.id ? <X size={16} /> : <Reply size={16} />}
+                    </button>
+                    
                     {comment.status !== "APPROVED" && (
                       <button
                         onClick={() => handleApprove(comment.id)}
@@ -169,7 +297,19 @@ export default function CommentList({ initialComments }: { initialComments: Comm
             ))
           )}
         </tbody>
-      </table>
+          </table>
+        </div>
+
+        {/* Pagination Footer */}
+        <AdminPagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          limit={pagination.limit}
+          onPageChange={handlePageChange}
+          isPending={isPending}
+        />
+      </div>
     </div>
   );
 }

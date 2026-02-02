@@ -6,16 +6,10 @@ import { deleteMediaFile } from "@/app/actions/media";
 import { Trash2, Copy, Check, Search, Image as ImageIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function MediaGrid({ initialFiles }: { initialFiles: string[] }) {
-  const [files, setFiles] = useState(initialFiles);
-  const [searchTerm, setSearchTerm] = useState("");
+export default function MediaGrid({ files }: { files: string[] }) {
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-
-  const filteredFiles = files.filter((file) =>
-    file.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleDelete = async (fileName: string) => {
     if (!confirm(`Are you sure you want to delete ${fileName}? This might break posts using this image.`)) return;
@@ -23,7 +17,6 @@ export default function MediaGrid({ initialFiles }: { initialFiles: string[] }) 
     startTransition(async () => {
       const result = await deleteMediaFile(fileName);
       if (result.success) {
-        setFiles(files.filter((f) => f !== fileName));
         router.refresh();
       } else {
         alert(result.message || "Failed to delete file");
@@ -40,34 +33,20 @@ export default function MediaGrid({ initialFiles }: { initialFiles: string[] }) 
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search size={18} className="text-gray-400" />
-        </div>
-        <input
-          type="text"
-          placeholder="Search media files..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-black/5 focus:border-black outline-hidden bg-white shadow-sm transition-all"
-        />
-      </div>
-
-      {filteredFiles.length === 0 ? (
+      {files.length === 0 ? (
         <div className="bg-white p-16 text-center rounded-xl border border-gray-200 shadow-sm">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
                <ImageIcon className="w-8 h-8 text-gray-300" />
             </div>
             <p className="text-gray-500 font-medium">
-              {searchTerm ? "No files match your search." : "No media files found. Upload your first image!"}
+              No media files found.
             </p>
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6">
-          {filteredFiles.map((file) => (
+          {files.map((file) => (
             <div key={file} className="group relative bg-white p-2 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
               <div className="relative aspect-square bg-gray-50 rounded-lg overflow-hidden mb-3">
                 <Image

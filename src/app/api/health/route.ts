@@ -55,7 +55,16 @@ export async function GET(): Promise<NextResponse<HealthCheckResponse>> {
   // 1. Database Health Check
   try {
     const dbStartTime = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
+    // Use a race to implement a timeout for the DB check
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Database connection timeout")), 5000)
+    );
+    
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      timeoutPromise
+    ]);
+    
     const dbResponseTime = Date.now() - dbStartTime;
 
     checks.database = {
@@ -167,7 +176,7 @@ export async function GET(): Promise<NextResponse<HealthCheckResponse>> {
     overallStatus === "healthy"
       ? 200
       : overallStatus === "degraded"
-        ? 503
+        ? 200
         : 503;
 
   return NextResponse.json(response, { status: statusCode });

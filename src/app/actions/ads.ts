@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { logActivity } from "@/lib/activity";
 
 async function requireAdPermission() {
   const session = await getServerSession(authOptions);
@@ -92,8 +93,12 @@ export async function updateAd(id: number, _prevState: any, formData: FormData) 
 
 export async function deleteAd(id: number) {
   try {
+    const session = await getServerSession(authOptions);
     await requireAdPermission();
     await prisma.ad.delete({ where: { id } });
+    
+    await logActivity(Number((session?.user as any).id), "DELETE_AD", "Ad", { id });
+
     revalidatePath("/admin/ads");
     return { success: true };
   } catch {
@@ -103,11 +108,15 @@ export async function deleteAd(id: number) {
 
 export async function toggleAdStatus(id: number, isActive: boolean) {
   try {
+    const session = await getServerSession(authOptions);
     await requireAdPermission();
     await prisma.ad.update({
       where: { id },
       data: { isActive },
     });
+
+    await logActivity(Number((session?.user as any).id), "TOGGLE_AD_STATUS", "Ad", { id, isActive });
+
     revalidatePath("/admin/ads");
     return { success: true };
   } catch {

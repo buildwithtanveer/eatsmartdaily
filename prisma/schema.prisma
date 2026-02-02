@@ -116,6 +116,7 @@ model Post {
   views                      Int         @default(0)
   previewToken              String?      @unique(map: "Post_previewToken_key")
   previewExpiresAt          DateTime?
+  allowComments             Boolean     @default(true)
   comments                   Comment[]
   author   User  @relation("post_authorIdTouser", fields: [authorId], references: [id], map: "Post_authorId_fkey")
   category Category? @relation(fields: [categoryId], references: [id], map: "Post_categoryId_fkey")
@@ -178,8 +179,41 @@ model SiteSettings {
   adsTxt              String? @db.Text
   googleAdSenseId     String?
   smtpSettings        String? @db.Text
+  maintenanceMode     Boolean @default(false)
+
+  // Backup Automation
+  autoBackupEnabled   Boolean @default(false)
+  autoBackupFrequency String  @default("WEEKLY")
+  lastAutoBackup      DateTime?
+
+  // Spam Protection
+  spamKeywords        String? @db.Text
+  blockedIps          String? @db.Text
 
   @@map("sitesettings")
+}
+
+model DailyStat {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @unique @db.Date
+  views     Int      @default(0)
+  visitors  Int      @default(0)
+  visitorsList DailyVisitor[]
+
+  @@index([date])
+  @@map("dailystat")
+}
+
+model DailyVisitor {
+  id        Int      @id @default(autoincrement())
+  ipHash    String
+  statId    Int
+  stat      DailyStat @relation(fields: [statId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([statId, ipHash])
+  @@index([statId])
+  @@map("dailyvisitor")
 }
 
 model Tag {
@@ -284,11 +318,13 @@ model Backup {
   size         BigInt
   type         BackupType @default(FULL)
   status       BackupStatus @default(PENDING)
+  progress     Int          @default(0)
   description  String?   @db.Text
   createdBy    Int
   createdAt    DateTime  @default(now())
   completedAt  DateTime?
   errorMessage String?   @db.Text
+  content      String?   @db.LongText
   
   editor User @relation(fields: [createdBy], references: [id], map: "Backup_createdBy_fkey")
 

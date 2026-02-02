@@ -8,6 +8,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { captureException } from "@/lib/sentry-config";
 
+import { processBackupInBackground } from "@/lib/backup-processor";
+
 /**
  * GET /api/admin/backups
  * List all backups
@@ -34,7 +36,12 @@ export async function GET(request: Request) {
       take: 100,
     });
 
-    return NextResponse.json({ backups }, { status: 200 });
+    const serializedBackups = backups.map((backup) => ({
+      ...backup,
+      size: backup.size.toString(),
+    }));
+
+    return NextResponse.json({ backups: serializedBackups }, { status: 200 });
   } catch (error) {
     console.error("Error fetching backups:", error);
     if (error instanceof Error) {
@@ -54,10 +61,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const user = session?.user as { id: number; role: string } | undefined;
+    const user = session?.user as { id: string | number; role: string } | undefined;
 
     if (!session || !user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const userId = Number(user.id);
+    if (isNaN(userId)) {
+      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
     const { type = "FULL", description } = await request.json();
@@ -66,132 +78,42 @@ export async function POST(request: Request) {
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
     const filename = `backup_${type.toLowerCase()}_${timestamp}.json`;
 
+    // Initialize backup record with IN_PROGRESS status
     const backup = await prisma.backup.create({
       data: {
         filename,
         type,
         description,
-        status: "PENDING",
+        status: "IN_PROGRESS",
         size: BigInt(0),
-        createdBy: user.id,
+        createdBy: userId,
+        progress: 0
       },
     });
 
-    // Queue backup job in background
-    queueBackupJob(backup.id, type, user.id);
+    // Start background processing WITHOUT await
+    processBackupInBackground(backup.id, type, userId).catch(err => {
+        console.error("Background backup failed to start:", err);
+    });
 
     return NextResponse.json(
       {
-        message: "Backup created successfully",
+        message: "Backup started successfully",
         backupId: backup.id,
         filename: backup.filename,
+        status: "IN_PROGRESS"
       },
-      { status: 200 },
+      { status: 202 },
     );
+
   } catch (error) {
     console.error("Error creating backup:", error);
     if (error instanceof Error) {
-      captureException(error, { context: "create_backup" });
+      captureException(error, { context: "create_backup_init" });
     }
     return NextResponse.json(
-      { error: "Failed to create backup" },
+      { error: "Failed to initiate backup" },
       { status: 500 },
     );
   }
-}
-
-/**
- * Queue backup job to run in the background
- */
-function queueBackupJob(backupId: number, type: string, userId: number) {
-  // Run backup asynchronously
-  (async () => {
-    try {
-      const startTime = Date.now();
-
-      // Update status to IN_PROGRESS
-      await prisma.backup.update({
-        where: { id: backupId },
-        data: { status: "IN_PROGRESS" },
-      });
-
-      // Prepare backup data based on type
-      let backupData: any = {};
-
-      if (type === "FULL" || type === "POSTS_ONLY") {
-        backupData.posts = await prisma.post.findMany({
-          include: {
-            author: { select: { id: true, name: true, email: true } },
-            category: true,
-            tags: true,
-            comments: true,
-            versions: true,
-          },
-        });
-
-        backupData.categories = await prisma.category.findMany();
-        backupData.tags = await prisma.tag.findMany();
-      }
-
-      if (type === "FULL" || type === "DATABASE_ONLY") {
-        backupData.users = await prisma.user.findMany({
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            bio: true,
-            jobTitle: true,
-          },
-        });
-
-        backupData.comments = await prisma.comment.findMany();
-        backupData.settings = await prisma.siteSettings.findFirst();
-        backupData.ads = await prisma.ad.findMany();
-        backupData.redirects = await prisma.redirect.findMany();
-      }
-
-      backupData.exportedAt = new Date().toISOString();
-      backupData.exportType = type;
-
-      const backupJson = JSON.stringify(backupData, null, 2);
-      const size = BigInt(backupJson.length);
-
-      // Save backup status
-      await prisma.backup.update({
-        where: { id: backupId },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-          size: size,
-        },
-      });
-
-      // Log activity
-      await prisma.activityLog.create({
-        data: {
-          action: "backup_created",
-          resource: `backup_${backupId}`,
-          details: `Backup completed in ${Date.now() - startTime}ms`,
-          userId: userId,
-        },
-      });
-    } catch (error) {
-      console.error("Error during backup:", error);
-
-      // Update status to FAILED
-      await prisma.backup.update({
-        where: { id: backupId },
-        data: {
-          status: "FAILED",
-          errorMessage:
-            error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-
-      if (error instanceof Error) {
-        captureException(error, { context: "backup_job", backupId });
-      }
-    }
-  })();
 }

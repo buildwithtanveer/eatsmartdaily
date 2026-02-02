@@ -1,23 +1,48 @@
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import AdminTableToolbar from "@/components/admin/AdminTableToolbar";
+import AdminTableFooter from "@/components/admin/AdminTableFooter";
 import { Activity, User, PlusCircle, Edit, Trash2, LogIn } from "lucide-react";
 
-export default async function ActivityLogPage() {
+export default async function ActivityLogPage(props: {
+  searchParams: Promise<{ page?: string; limit?: string; search?: string }>;
+}) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
 
-  const logs = await prisma.activityLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          image: true,
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(searchParams.limit) || 20));
+  const search = searchParams.search || "";
+
+  const where = search ? {
+    OR: [
+      { action: { contains: search } },
+      { details: { contains: search } },
+      { user: { name: { contains: search } } },
+      { user: { email: { contains: search } } }
+    ]
+  } : {};
+
+  const [logs, totalLogs] = await Promise.all([
+    prisma.activityLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            image: true,
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.activityLog.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(totalLogs / limit);
 
   const getActionIcon = (action: string) => {
     if (action.includes("CREATE")) return <PlusCircle size={16} className="text-green-600" />;
@@ -40,12 +65,14 @@ export default async function ActivityLogPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Activity Log</h1>
-          <p className="text-gray-500 text-sm">Track system events and user actions (Last 100).</p>
+          <p className="text-gray-500 text-sm">Track system events and user actions.</p>
         </div>
         <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm text-sm font-medium text-gray-600">
-          Total: {logs.length}
+          Total: {totalLogs}
         </div>
       </div>
+
+      <AdminTableToolbar searchPlaceholder="Search logs..." />
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
         <div className="overflow-x-auto">
@@ -68,6 +95,7 @@ export default async function ActivityLogPage() {
                         <Activity className="w-6 h-6 text-gray-300" />
                       </div>
                       <p className="font-medium">No activity logs found</p>
+                      <p className="text-sm text-gray-500">Try adjusting your search criteria.</p>
                     </div>
                   </td>
                 </tr>
@@ -99,10 +127,10 @@ export default async function ActivityLogPage() {
                         {log.action}
                       </span>
                     </td>
-                    <td className="p-4 text-gray-600 font-medium">
+                    <td className="p-4 font-mono text-xs text-gray-600">
                       {log.resource}
                     </td>
-                    <td className="p-4 text-gray-500 max-w-md truncate" title={log.details || ""}>
+                    <td className="p-4 text-gray-600 max-w-md truncate" title={log.details || ""}>
                       {log.details || "-"}
                     </td>
                   </tr>
@@ -111,6 +139,12 @@ export default async function ActivityLogPage() {
             </tbody>
           </table>
         </div>
+        <AdminTableFooter 
+          currentPage={page} 
+          totalPages={totalPages} 
+          totalItems={totalLogs} 
+          limit={limit} 
+        />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
+import { createHash } from "crypto";
 
 // We use "nodejs" runtime because standard Prisma Client doesn't support Edge runtime
 // without an accelerator. This is still performant for this use case.
@@ -53,10 +54,62 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Update view count
-    await prisma.post.update({
-      where: { id: postId },
-      data: { views: { increment: 1 } },
+    // Create IP hash for visitor tracking (privacy preserving)
+    const ipHash = createHash("sha256").update(clientIp).digest("hex");
+    
+    // Get today's date at midnight UTC
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    // Transaction to update all stats safely
+    await prisma.$transaction(async (tx) => {
+      // 1. Increment Post view count
+      await tx.post.update({
+        where: { id: postId },
+        data: { views: { increment: 1 } },
+      });
+
+      // 2. Get or create DailyStat for today
+      let dailyStat = await tx.dailyStat.findUnique({
+        where: { date: today },
+      });
+
+      if (!dailyStat) {
+        dailyStat = await tx.dailyStat.create({
+          data: { date: today, views: 0, visitors: 0 },
+        });
+      }
+
+      // 3. Check if this visitor has already visited today
+      const existingVisitor = await tx.dailyVisitor.findUnique({
+        where: {
+          statId_ipHash: {
+            statId: dailyStat.id,
+            ipHash: ipHash,
+          },
+        },
+      });
+
+      const isNewVisitor = !existingVisitor;
+
+      // 4. Update DailyStat
+      await tx.dailyStat.update({
+        where: { id: dailyStat.id },
+        data: {
+          views: { increment: 1 },
+          visitors: isNewVisitor ? { increment: 1 } : undefined,
+        },
+      });
+
+      // 5. Record visitor if new
+      if (isNewVisitor) {
+        await tx.dailyVisitor.create({
+          data: {
+            statId: dailyStat.id,
+            ipHash: ipHash,
+          },
+        });
+      }
     });
 
     return new NextResponse(JSON.stringify({ success: true }), {

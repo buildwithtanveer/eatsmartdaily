@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createAd, updateAd, deleteAd, toggleAdStatus } from "@/app/actions/ads";
 import { Megaphone, Code, Image as ImageIcon, Type, Trash2, Edit, Power, Plus } from "lucide-react";
 
@@ -13,9 +14,10 @@ type Ad = {
   isActive: boolean;
 };
 
-export default function AdManager({ initialAds }: { initialAds: Ad[] }) {
+export default function AdManager({ ads }: { ads: Ad[] }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
+  const router = useRouter(); // Need router for refresh
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,6 +33,7 @@ export default function AdManager({ initialAds }: { initialAds: Ad[] }) {
     if (result.success) {
       setIsEditing(false);
       setEditingAd(null);
+      router.refresh();
     } else {
       alert(result.message || "Operation failed");
     }
@@ -39,10 +42,12 @@ export default function AdManager({ initialAds }: { initialAds: Ad[] }) {
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this ad?")) return;
     await deleteAd(id);
+    router.refresh();
   };
 
   const handleToggle = async (ad: Ad) => {
     await toggleAdStatus(ad.id, !ad.isActive);
+    router.refresh();
   };
 
   const getTypeIcon = (type: string) => {
@@ -172,13 +177,13 @@ export default function AdManager({ initialAds }: { initialAds: Ad[] }) {
         </div>
       )}
 
-      {initialAds.length === 0 && !isEditing ? (
+      {ads.length === 0 && !isEditing ? (
         <div className="bg-white p-16 text-center rounded-xl border border-gray-200 shadow-sm">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
                <Megaphone className="w-8 h-8 text-gray-300" />
             </div>
-            <p className="text-gray-500 font-medium">No ad units created yet.</p>
+            <p className="text-gray-500 font-medium">No ad units found.</p>
             <button
               onClick={() => setIsEditing(true)}
               className="text-blue-600 hover:underline font-medium"
@@ -189,7 +194,7 @@ export default function AdManager({ initialAds }: { initialAds: Ad[] }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {initialAds.map((ad) => (
+          {ads.map((ad) => (
             <div key={ad.id} className={`
               bg-white rounded-xl border p-5 shadow-sm transition-all hover:shadow-md group
               ${!ad.isActive ? "opacity-75 bg-gray-50 border-gray-200" : "border-gray-200"}

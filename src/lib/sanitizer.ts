@@ -1,12 +1,12 @@
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtmlPackage from "sanitize-html";
 
 /**
  * Sanitize HTML content to prevent XSS attacks
  * Allows safe HTML tags for rich content (ads, blog posts, etc.)
  */
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: [
+  return sanitizeHtmlPackage(html, {
+    allowedTags: [
       "p",
       "br",
       "strong",
@@ -36,23 +36,23 @@ export function sanitizeHtml(html: string): string {
       "th",
       "iframe",
     ],
-    ALLOWED_ATTR: [
-      "href",
-      "src",
-      "alt",
-      "title",
-      "class",
-      "id",
-      "target",
-      "rel",
-      "width",
-      "height",
-      "style",
-      "data-*",
-      "allowfullscreen",
-      "frameborder",
-    ],
-    ALLOW_DATA_ATTR: true,
+    allowedAttributes: {
+      a: ["href", "name", "target", "rel", "title", "class", "id"],
+      img: ["src", "alt", "title", "width", "height", "class", "id"],
+      iframe: [
+        "src",
+        "width",
+        "height",
+        "frameborder",
+        "allowfullscreen",
+        "style",
+        "class",
+        "id",
+      ],
+      "*": ["class", "id", "style", "data-*"],
+    },
+    allowedIframeHostnames: ["www.youtube.com", "player.vimeo.com", "google.com"],
+    allowVulnerableTags: true, // Needed for some ad scripts if they use them
   });
 }
 

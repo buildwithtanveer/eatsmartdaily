@@ -1,20 +1,22 @@
 import Sidebar from "@/components/Sidebar";
 import { Metadata } from "next";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eatsmartdaily.com";
+
 export const metadata: Metadata = {
   title: "Cookie Policy",
   description: "Understand how Eat Smart Daily uses cookies to improve your experience.",
   alternates: {
-    canonical: "https://eatsmartdaily.com/cookie-policy",
+    canonical: `${siteUrl}/cookie-policy`,
   },
   openGraph: {
     title: "Cookie Policy | Eat Smart Daily",
     description: "Understand how Eat Smart Daily uses cookies to improve your experience.",
-    url: "https://eatsmartdaily.com/cookie-policy",
+    url: `${siteUrl}/cookie-policy`,
     type: "website",
     images: [
       {
-        url: "/logo.svg",
+        url: `${siteUrl}/logo.svg`,
         width: 1200,
         height: 630,
         alt: "Eat Smart Daily",
@@ -26,6 +28,30 @@ export const metadata: Metadata = {
 export default function CookiePolicyPage() {
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebPage",
+                name: "Cookie Policy",
+                description:
+                  "Understand how Eat Smart Daily uses cookies to improve your experience.",
+                url: `${siteUrl}/cookie-policy`,
+              },
+              {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+                  { "@type": "ListItem", position: 2, name: "Cookie Policy", item: `${siteUrl}/cookie-policy` },
+                ],
+              },
+            ],
+          }),
+        }}
+      />
       {/* LEFT CONTENT COLUMN */}
       <div className="lg:col-span-8">
         <h1 className="text-3xl font-bold mb-6 text-gray-800 border-b pb-2">Cookie Policy</h1>
