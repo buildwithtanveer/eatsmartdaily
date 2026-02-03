@@ -58,7 +58,7 @@ export async function createComment(_prevState: unknown, formData: FormData) {
     // Rate limiting: 5 comments per minute per IP
     const headersList = await headers();
     const ip = getClientIpFromHeaders(headersList);
-    const rateLimit = checkRateLimit(ip, "api_comments");
+    const rateLimit = await checkRateLimit(ip, "api_comments");
 
     if (!rateLimit.allowed) {
       return {

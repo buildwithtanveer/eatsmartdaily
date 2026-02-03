@@ -107,6 +107,7 @@ export function sanitizeSlug(slug: string): string {
  * Escape HTML special characters (alternative to sanitization)
  */
 export function escapeHtml(text: string): string {
+  if (!text) return "";
   const map: Record<string, string> = {
     "&": "&amp;",
     "<": "&lt;",

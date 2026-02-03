@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   }
 
   const ip = getClientIp(req);
-  const rateLimit = checkRateLimit(ip, "api_upload");
+  const rateLimit = await checkRateLimit(ip, "api_upload");
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests" },

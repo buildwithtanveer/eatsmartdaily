@@ -29,7 +29,7 @@ export async function submitContactForm(
   // Rate limiting
   const headersList = await headers();
   const clientIp = getClientIpFromHeaders(headersList);
-  const rateLimit = checkRateLimit(clientIp, "api_contact");
+  const rateLimit = await checkRateLimit(clientIp, "api_contact");
 
   if (!rateLimit.allowed) {
     return {

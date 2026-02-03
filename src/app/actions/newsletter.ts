@@ -36,7 +36,7 @@ export async function subscribeNewsletter(
     // Rate limiting: 3 subscriptions per day per IP
     const headersList = await headers();
     const ip = getClientIpFromHeaders(headersList);
-    const rateLimit = checkRateLimit(ip, "api_newsletter");
+    const rateLimit = await checkRateLimit(ip, "api_newsletter");
 
     if (!rateLimit.allowed) {
       return {

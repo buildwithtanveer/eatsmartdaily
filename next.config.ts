@@ -73,11 +73,11 @@ const nextConfig: NextConfig = {
             value:
               "camera=(), microphone=(), geolocation=(), browsing-topics=(), magnetometer=(), gyroscope=(), accelerometer=()",
           },
-          // Content Security Policy
+          // Content Security Policy - Updated for better security
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://*.ezojs.com https://*.gatekeeperconsent.com https://the.gatekeeperconsent.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https: http:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: https://*.google-analytics.com https://*.googlesyndication.com https://*.ezoic.com; frame-src 'self' https://*.googlesyndication.com https://*.google.com https://*.ezoic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
+              "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://*.ezojs.com https://*.gatekeeperconsent.com https://the.gatekeeperconsent.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https: http:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: https://*.google-analytics.com https://*.googlesyndication.com https://*.ezoic.com; frame-src 'self' https://*.googlesyndication.com https://*.google.com https://*.ezoic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests;",
           },
           // Require HTTPS for all resources
           {

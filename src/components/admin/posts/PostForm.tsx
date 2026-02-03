@@ -6,11 +6,15 @@ import Link from "next/link";
 import RichEditor from "@/components/RichEditor";
 import MediaSelector from "@/components/admin/media/MediaSelector";
 import { createPost, updatePost, deletePost } from "@/app/actions/posts";
-import { 
-  Copy, Check, Save, Trash2, ArrowLeft, Calendar, 
+import {
+  Copy, Check, Save, Trash2, ArrowLeft, Calendar,
   Image as ImageIcon, Globe, Layout, Search, Link as LinkIcon,
   Settings, ChevronDown, Plus, X, Eye, EyeOff, AlertCircle
 } from "lucide-react";
+import FAQSection from "./FAQSection";
+import ReferencesSection from "./ReferencesSection";
+import PublishingCard from "./PublishingCard";
+import VisibilitySettings from "./VisibilitySettings";
 
 interface PostData {
   id?: number;
@@ -451,184 +455,20 @@ export default function PostForm({ categories, tags, post, internalLinks = [], u
             </div>
 
             {/* FAQ Section */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                    <Search size={20} />
-                  </div>
-                  <h3 className="font-bold text-gray-900">FAQ Section</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFaqs([...faqs, { question: "", answer: "" }])}
-                  className="text-sm font-bold text-green-600 hover:text-green-700 flex items-center gap-1"
-                >
-                  <Plus size={16} />
-                  Add Question
-                </button>
-              </div>
-              
-              <div className="space-y-6">
-                {faqs.map((faq, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-100 relative group">
-                    <button
-                      type="button"
-                      onClick={() => setFaqs(faqs.filter((_, i) => i !== index))}
-                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Question</label>
-                        <input
-                          value={faq.question}
-                          onChange={(e) => {
-                            const newFaqs = [...faqs];
-                            newFaqs[index].question = e.target.value;
-                            setFaqs(newFaqs);
-                          }}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/5 focus:border-black outline-hidden text-sm"
-                          placeholder="e.g. Is this recipe vegan?"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Answer</label>
-                        <textarea
-                          value={faq.answer}
-                          onChange={(e) => {
-                            const newFaqs = [...faqs];
-                            newFaqs[index].answer = e.target.value;
-                            setFaqs(newFaqs);
-                          }}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/5 focus:border-black outline-hidden text-sm min-h-[80px]"
-                          placeholder="Provide a clear answer..."
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {faqs.length === 0 && (
-                  <p className="text-center py-4 text-sm text-gray-400 italic">No FAQ items added yet.</p>
-                )}
-              </div>
-            </div>
+            <FAQSection faqs={faqs} setFaqs={setFaqs} />
 
             {/* References Section */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
-                    <LinkIcon size={20} />
-                  </div>
-                  <h3 className="font-bold text-gray-900">References & Citations</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setReferences([...references, { title: "", url: "" }])}
-                  className="text-sm font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
-                >
-                  <Plus size={16} />
-                  Add Reference
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                {references.map((ref, index) => (
-                  <div key={index} className="flex gap-4 items-end p-4 bg-gray-50 rounded-lg border border-gray-100 relative group">
-                    <div className="flex-1 space-y-3">
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Source Title</label>
-                        <input
-                          value={ref.title}
-                          onChange={(e) => {
-                            const newRefs = [...references];
-                            newRefs[index].title = e.target.value;
-                            setReferences(newRefs);
-                          }}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/5 focus:border-black outline-hidden text-sm"
-                          placeholder="e.g. WHO Nutrition Guide"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Source URL</label>
-                        <input
-                          value={ref.url}
-                          onChange={(e) => {
-                            const newRefs = [...references];
-                            newRefs[index].url = e.target.value;
-                            setReferences(newRefs);
-                          }}
-                          className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/5 focus:border-black outline-hidden text-sm"
-                          placeholder="https://example.com/source"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setReferences(references.filter((_, i) => i !== index))}
-                      className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                ))}
-                {references.length === 0 && (
-                  <p className="text-center py-4 text-sm text-gray-400 italic">No references added yet.</p>
-                )}
-              </div>
-            </div>
+            <ReferencesSection references={references} setReferences={setReferences} />
           </div>
 
           {/* Sidebar Column */}
           <div className="space-y-6">
-            {/* Publishing Card */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-              <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
-                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
-                  <Settings size={18} />
-                </div>
-                <h3 className="font-bold text-gray-900">Publishing</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Status</label>
-                  <div className="relative">
-                    <select
-                      name="status"
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/5 focus:border-black outline-hidden appearance-none bg-gray-50 cursor-pointer font-medium text-sm"
-                    >
-                      <option value="DRAFT">Draft</option>
-                      <option value="PUBLISHED">Published</option>
-                      <option value="SCHEDULED">Scheduled</option>
-                      <option value="ARCHIVED">Archived</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-3 text-gray-400 pointer-events-none" size={16} />
-                  </div>
-                </div>
-
-                {(status === "SCHEDULED" || status === "PUBLISHED") && (
-                  <div className="animate-in fade-in slide-in-from-top-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                      {status === "SCHEDULED" ? "Schedule Date" : "Publish Date"}
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                      <input
-                        type="datetime-local"
-                        value={publishedAt}
-                        onChange={(e) => setPublishedAt(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-black/5 focus:border-black outline-hidden text-sm"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <PublishingCard
+              status={status}
+              setStatus={setStatus}
+              publishedAt={publishedAt}
+              setPublishedAt={setPublishedAt}
+            />
 
             {/* Featured Image Card */}
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
@@ -731,57 +571,16 @@ export default function PostForm({ categories, tags, post, internalLinks = [], u
               </div>
             </div>
 
-            {/* Visibility Settings */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-              <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
-                <div className="p-2 bg-yellow-50 text-yellow-600 rounded-lg">
-                  <Eye size={18} />
-                </div>
-                <h3 className="font-bold text-gray-900">Visibility</h3>
-              </div>
-              
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={isFeatured}
-                    onChange={(e) => setIsFeatured(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Feature this post</span>
-                </label>
-                
-                <label className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showInSlider}
-                    onChange={(e) => setShowInSlider(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Show in Slider</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showInPopular}
-                    onChange={(e) => setShowInPopular(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Show in Popular</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={allowComments}
-                    onChange={(e) => setAllowComments(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Allow Comments</span>
-                </label>
-              </div>
-            </div>
+            <VisibilitySettings
+              isFeatured={isFeatured}
+              setIsFeatured={setIsFeatured}
+              showInSlider={showInSlider}
+              setShowInSlider={setShowInSlider}
+              showInPopular={showInPopular}
+              setShowInPopular={setShowInPopular}
+              allowComments={allowComments}
+              setAllowComments={setAllowComments}
+            />
           </div>
         </div>
       )}

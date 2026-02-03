@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     // Rate limiting: Max 100 view requests per 10 seconds per IP
     const clientIp = getClientIp(req);
-    const rateLimit = checkRateLimit(clientIp, "api_views");
+    const rateLimit = await checkRateLimit(clientIp, "api_views");
 
     if (!rateLimit.allowed) {
       return new NextResponse("Rate limit exceeded", {

@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         // CRITICAL: Check rate limit before attempting authentication
-        const { allowed, retryAfter } = checkRateLimit(
+        const { allowed, retryAfter } = await checkRateLimit(
           credentials.email,
           "api_auth_login",
         );

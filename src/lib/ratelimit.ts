@@ -1,16 +1,77 @@
 /**
- * Simple in-memory rate limiting for API routes
- * In production, use Upstash Redis for distributed rate limiting
- *
- * For now, we'll use a simple in-memory approach that's good for single-server setups
+ * Distributed rate limiting using Upstash Redis for production
+ * Falls back to in-memory rate limiting for development
  */
+
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 interface RateLimitEntry {
   count: number;
   resetTime: number;
 }
 
+// In-memory store for development
 const rateLimitStore = new Map<string, RateLimitEntry>();
+
+// Initialize Upstash Redis client
+let redis: Redis | null = null;
+let ratelimit: Ratelimit | null = null;
+
+// Initialize Redis and Ratelimit clients if environment variables are present
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  try {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+
+    // Create different rate limiters for different endpoints
+    const limiters: Record<string, Ratelimit> = {
+      api_posts: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, "60s"), // 10 requests per minute
+      }),
+      api_contact: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, "1h"), // 5 requests per hour
+      }),
+      api_newsletter: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(3, "24h"), // 3 requests per day
+      }),
+      api_comments: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, "60s"), // 5 requests per minute
+      }),
+      api_views: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(100, "10s"), // 100 requests per 10 seconds
+      }),
+      api_auth_login: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, "15m"), // 5 attempts per 15 minutes
+      }),
+      api_upload: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(20, "60s"), // 20 requests per minute
+      }),
+    };
+
+    // Use the most restrictive limiter as default
+    ratelimit = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(100, "10s"), // Default: 100 requests per 10 seconds
+    });
+
+    // Export individual limiters
+    (global as any).rateLimiters = limiters;
+  } catch (error) {
+    console.warn("Failed to initialize Upstash Redis, falling back to in-memory rate limiting:", error);
+    redis = null;
+    ratelimit = null;
+  }
+}
 
 /**
  * Rate limit configuration
@@ -33,12 +94,33 @@ const DEFAULT_LIMITS: Record<string, RateLimitConfig> = {
 
 /**
  * Check if request is rate limited
+ * Uses Upstash Redis in production, falls back to in-memory in development
  * Returns true if allowed, false if rate limited
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   identifier: string,
   endpoint: string,
-): { allowed: boolean; retryAfter?: number } {
+): Promise<{ allowed: boolean; retryAfter?: number }> {
+  // Use Upstash Redis if available
+  if (ratelimit && redis) {
+    const limiters = (global as any).rateLimiters as Record<string, Ratelimit> | undefined;
+    const specificLimiter = limiters?.[endpoint];
+
+    try {
+      const result = await (specificLimiter || ratelimit).limit(`${endpoint}_${identifier}`);
+
+      return {
+        allowed: result.success,
+        retryAfter: result.success ? undefined : Math.ceil(result.reset / 1000),
+      };
+    } catch (error) {
+      console.warn(`Rate limiting error for ${endpoint}:${identifier}`, error);
+      // If rate limiting fails, allow the request to go through to avoid blocking users
+      return { allowed: true };
+    }
+  }
+
+  // Fallback to in-memory rate limiting for development
   const config = DEFAULT_LIMITS[endpoint];
 
   if (!config) {
